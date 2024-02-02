@@ -1,0 +1,244 @@
+---
+title: "fDOM forecasting exploration"
+author: "Dexter Howard"
+date: "2024-01-22"
+output: html_document
+---
+
+
+## Get data and load packages 
+
+```{r}
+library(tidyverse)
+library(ggpmisc)
+
+#all curretnly staged EDI in jan 2024; for data to 31 dec 2023
+#dont use read.csv, it converts measurements at midnight to a Date not a DateTime
+
+fcr <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/518/23/bf3c9cf333f25dc600c115dc8a46d40c") #staged
+
+bvr <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/157/27/6b78ab905a142b5dcc29044b83bae676") #staged
+
+ccr <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/719/24/b7e4a95bf842e24c77cfd23dfee543cd") #staged
+
+
+```
+
+
+## fDOM timeseries plots 
+
+```{r}
+
+fcr_dailyFDOM <- fcr %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  group_by(Reservoir, Date) %>% 
+  summarise(fDOM1 = mean(EXOfDOM_QSU_1, na.rm = T), .groups = "drop") %>% 
+  pivot_longer(-c(1:2))
+
+bvr_dailyFDOM <- bvr %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  group_by(Reservoir, Date) %>% 
+  summarise(fDOM1 = mean(EXOfDOM_QSU_1.5, na.rm = T), .groups = "drop")%>% 
+  pivot_longer(-c(1:2))
+
+ccr_dailyFDOM <- ccr %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  group_by(Reservoir, Date) %>% 
+  summarise(fDOM1 = mean(EXOfDOM_QSU_1, na.rm = T),
+            fDOM9 = mean(EXOfDOM_QSU_9, na.rm = T), .groups = "drop")%>% 
+  pivot_longer(-c(1:2))
+            
+  
+fdom_joined <- rbind(fcr_dailyFDOM, bvr_dailyFDOM, ccr_dailyFDOM)
+
+fdom_ts <- fdom_joined %>% 
+  filter(name != "fDOM9") %>% 
+  ggplot(aes(x = Date, y = value, color = name))+
+  geom_point()+
+  facet_wrap(~Reservoir, nrow = 3)
+  
+fdom_ts
+
+##use plotly to see timeseries stops and end and gaps timeframes
+# plotly::ggplotly(fdom_ts)
+
+```
+
+## check TS at midnightvs daily average 
+
+```{r}
+#### FCR 
+
+fcr_dailyFDOM <- fcr %>% 
+  select(DateTime, EXOfDOM_QSU_1) %>% 
+  filter(!is.na(EXOfDOM_QSU_1)) %>% 
+  # filter(DateTime > ymd("2023-12-20")) %>% 
+  mutate(Date = as.Date(DateTime),
+         Hour = hour(DateTime),
+         Minute = minute(DateTime)
+         #Time = hms(paste(hour(DateTime), minute(DateTime), second(DateTime), sep = ":"))
+         ) %>% 
+  group_by(Date) %>% 
+  mutate(fDOM_dailymean = mean(EXOfDOM_QSU_1, na.rm = T)) %>% 
+  ungroup() %>% 
+  filter(Hour == 0 & Minute == 0) %>% 
+  mutate(Diff = EXOfDOM_QSU_1 - fDOM_dailymean)
+
+fcr_dailyFDOM %>% 
+  ggplot()+
+  geom_point(aes(x=Date, y = EXOfDOM_QSU_1, color = "midnight"))+
+  geom_point(aes(x=Date, y = fDOM_dailymean,  color = "mean"))+ 
+  ggtitle("FCR daily mean fDOM and midnight fDOM")
+
+
+fcr_dailyFDOM %>% 
+  ggplot(aes(x = Date, y = Diff))+
+  geom_point()+   
+  ggtitle("Difference between FCR daily mean fDOM and midnight fDOM")
+
+
+fcr_dailyFDOM %>% 
+  ggplot(aes(x = fDOM_dailymean, y = EXOfDOM_QSU_1))+
+  geom_point()+ 
+  ggtitle("FCR daily mean fDOM ~ midnight fDOM")+
+  stat_poly_line() +  stat_poly_eq() 
+
+
+```
+
+
+## Testing fDOM regress
+
+```{r}
+#chem EDI data
+chem <- read_csv("C:/Users/dwh18/OneDrive/Desktop/R_Projects/FCR_Metabolism_OLD/Data/EDI2023/FCR_chem_2022.csv")
+
+
+#### FCR 
+fcr_doc <- chem %>% 
+  filter(Reservoir == "FCR",
+         Site == 50, 
+         Depth_m == 1.6,
+         !is.na(DOC_mgL)) %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  filter(Date > ymd("2018-08-05")) %>% 
+  group_by(Reservoir, Depth_m, Date) %>% 
+  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
+
+fcr_fdom_doc <- left_join(fcr_doc, fcr_dailyFDOM, by = "Date")
+
+#plot DOC~fDOM
+fcr_fdom_doc %>%
+  mutate(Year = year(Date),
+         Month = month(Date),
+         Season = ifelse(Month %in% c(6,7,8), "Summer", NA),
+         Season = ifelse(Month %in% c(9,10,11), "Fall", Season),
+        Season = ifelse(Month %in% c(12,1,2), "Winter", Season),
+         Season = ifelse(Month %in% c(3,4,5), "Spring", Season)  ) %>% 
+  # filter(Season == "Summer") %>%
+  # filter(Year != 2020) %>% 
+  # filter(Date > ymd("2019-10-01"),
+  #        Date < ymd("2020-09-01")) %>%
+  ggplot(aes(x = value, y = DOC))+ # , color = Season
+  geom_point()+
+  # stat_poly_line() +  stat_poly_eq() +
+  theme_bw()+
+  #facet_wrap(~Year, ncol = 1)+
+  ggtitle("FCR DOC~fDOM 1.6m")+
+  ylab("DOC (mg/L)")+
+  xlab("fDOM (QSU)")
+
+#### BVR
+bvr_doc <- chem %>% 
+  filter(Reservoir == "BVR",
+         Site == 50, 
+         Depth_m == 0.1,
+         !is.na(DOC_mgL)) %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  filter(Date > ymd("2020-06-24")) %>% 
+  group_by(Reservoir, Date, Depth_m) %>% 
+  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
+  
+bvr_fdom_doc <- left_join(bvr_doc, bvr_dailyFDOM, by = "Date")
+
+#plot DOC~fDOM
+bvr_fdom_doc %>% 
+  ggplot(aes(x = value, y = DOC))+
+  geom_point()+
+  stat_poly_line() +
+  stat_poly_eq() +
+  theme_bw()+
+ggtitle("BVR DOC 0.1m ~ fDOM 1.5m")+
+  ylab("DOC (mg/L)")+
+  xlab("fDOM (QSU)")
+
+#### CCR
+ccr_doc <- chem %>% 
+  filter(Reservoir == "CCR",
+         Site %in% c(50,51), 
+         Depth_m == 1.5,
+         !is.na(DOC_mgL)) %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  filter(Date > ymd("2021-06-30")) %>% 
+  group_by(Reservoir, Date, Depth_m) %>% 
+  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
+  
+ccr_dailyFDOM_1m <- ccr_dailyFDOM %>% 
+  filter(name == "fDOM1")
+  
+ccr_fdom_doc <- left_join(ccr_doc, ccr_dailyFDOM_1m, by = "Date")
+
+#plot DOC~fDOM
+ccr_fdom_doc %>% 
+  ggplot(aes(x = value, y = DOC))+
+  geom_point()+
+  stat_poly_line() +
+  stat_poly_eq() +
+  theme_bw()+
+  ggtitle("CCR DOC~fDOM 1.5m")+
+  ylab("DOC (mg/L)")+
+  xlab("fDOM (QSU)")
+
+
+
+
+#### Just DOC timeseries per reservoir 
+doc_ts <- rbind(fcr_doc, ccr_doc, bvr_doc) %>% 
+  ggplot(aes(x = Date, y = DOC))+
+  geom_point()+
+  facet_wrap(~Reservoir, ncol = 1)
+
+doc_ts
+
+
+
+```
+
+testing regress with additonal variables
+
+```{r}
+## just fdom to DOC regress
+summary(lm(DOC ~ value, data = fcr_fdom_doc))
+
+## other EXO to DOC regress 
+fcr_dailyEXO <- fcr %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  group_by(Reservoir, Date) %>% 
+  summarise(fDOM1 = mean(EXOfDOM_QSU_1, na.rm = T),
+            Chla1 = mean(EXOChla_ugL_1, na.rm = T),
+            TDS1 = mean(EXOTDS_mgL_1, na.rm = T),
+            Turb1 = mean(EXOTurbidity_FNU_1, na.rm = T),
+            .groups = "drop") 
+
+fcr_daily_EXO_DOC <- left_join(fcr_doc, fcr_dailyEXO)
+
+summary(lm(DOC ~ fDOM1 + Chla1 + TDS1, data = fcr_daily_EXO_DOC))
+
+
+
+
+```
+
+
+
+
