@@ -19,7 +19,7 @@ fcr <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/518/23/bf3c9cf
 
 bvr <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/157/27/6b78ab905a142b5dcc29044b83bae676") #staged
 
-ccr <- read_csv("https://pasta-s.lternet.edu/package/data/eml/edi/719/24/b7e4a95bf842e24c77cfd23dfee543cd") #staged
+ccr <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca") #2023 edi
 
 
 ```
@@ -65,14 +65,12 @@ fdom_ts
 ```
 
 ## check TS at midnightvs daily average 
+FCR 
 
 ```{r}
-#### FCR 
-
 fcr_dailyFDOM <- fcr %>% 
   select(DateTime, EXOfDOM_QSU_1) %>% 
   filter(!is.na(EXOfDOM_QSU_1)) %>% 
-  # filter(DateTime > ymd("2023-12-20")) %>% 
   mutate(Date = as.Date(DateTime),
          Hour = hour(DateTime),
          Minute = minute(DateTime)
@@ -90,12 +88,10 @@ fcr_dailyFDOM %>%
   geom_point(aes(x=Date, y = fDOM_dailymean,  color = "mean"))+ 
   ggtitle("FCR daily mean fDOM and midnight fDOM")
 
-
 fcr_dailyFDOM %>% 
   ggplot(aes(x = Date, y = Diff))+
   geom_point()+   
   ggtitle("Difference between FCR daily mean fDOM and midnight fDOM")
-
 
 fcr_dailyFDOM %>% 
   ggplot(aes(x = fDOM_dailymean, y = EXOfDOM_QSU_1))+
@@ -103,16 +99,88 @@ fcr_dailyFDOM %>%
   ggtitle("FCR daily mean fDOM ~ midnight fDOM")+
   stat_poly_line() +  stat_poly_eq() 
 
+```
+
+BVR
+
+```{r}
+bvr_dailyFDOM <- bvr %>% 
+  select(DateTime, EXOfDOM_QSU_1.5) %>% 
+  filter(!is.na(EXOfDOM_QSU_1.5)) %>% 
+  mutate(Date = as.Date(DateTime),
+         Hour = hour(DateTime),
+         Minute = minute(DateTime)) %>% 
+  group_by(Date) %>% 
+  mutate(fDOM_dailymean = mean(EXOfDOM_QSU_1.5, na.rm = T)) %>% 
+  ungroup() %>% 
+  filter(Hour == 0 & Minute == 0) %>% 
+  mutate(Diff = EXOfDOM_QSU_1.5 - fDOM_dailymean)
+
+bvr_dailyFDOM %>% 
+  ggplot()+
+  geom_point(aes(x=Date, y = EXOfDOM_QSU_1.5, color = "midnight"))+
+  geom_point(aes(x=Date, y = fDOM_dailymean,  color = "mean"))+ 
+  ggtitle("BVR daily mean fDOM and midnight fDOM")
+
+bvr_dailyFDOM %>% 
+  ggplot(aes(x = Date, y = Diff))+
+  geom_point()+   
+  ggtitle("Difference between BVR daily mean fDOM and midnight fDOM")
+
+bvr_dailyFDOM %>% 
+  ggplot(aes(x = fDOM_dailymean, y = EXOfDOM_QSU_1.5))+
+  geom_point()+ 
+  ggtitle("BVR daily mean fDOM ~ midnight fDOM")+
+  stat_poly_line() +  stat_poly_eq() 
+
+```
+
+CCR
+
+```{r}
+ccr_dailyFDOM <- ccr %>% 
+  select(DateTime, EXOfDOM_QSU_1) %>% 
+  filter(!is.na(EXOfDOM_QSU_1)) %>% 
+  mutate(Date = as.Date(DateTime),
+         Hour = hour(DateTime),
+         Minute = minute(DateTime)) %>% 
+  group_by(Date) %>% 
+  mutate(fDOM_dailymean = mean(EXOfDOM_QSU_1, na.rm = T)) %>% 
+  ungroup() %>% 
+  filter(Hour == 0 & Minute == 0) %>% 
+  mutate(Diff = EXOfDOM_QSU_1 - fDOM_dailymean)
+
+ccr_dailyFDOM %>% 
+  ggplot()+
+  geom_point(aes(x=Date, y = EXOfDOM_QSU_1, color = "midnight"))+
+  geom_point(aes(x=Date, y = fDOM_dailymean,  color = "mean"))+ 
+  ggtitle("CCR daily mean fDOM and midnight fDOM")
+
+
+ccr_dailyFDOM %>% 
+  ggplot(aes(x = Date, y = Diff))+
+  geom_point()+   
+  ggtitle("Difference between CCR daily mean fDOM and midnight fDOM")
+
+
+ccr_dailyFDOM %>% 
+  ggplot(aes(x = fDOM_dailymean, y = EXOfDOM_QSU_1))+
+  geom_point()+ 
+  ggtitle("CCR daily mean fDOM ~ midnight fDOM")+
+  stat_poly_line() +  stat_poly_eq() 
+
 
 ```
 
 
-## Testing fDOM regress
+
+## Testing fDOM~DOC regress
+
+FCR fDOM ~ DOC
 
 ```{r}
 #chem EDI data
 chem <- read_csv("C:/Users/dwh18/OneDrive/Desktop/R_Projects/FCR_Metabolism_OLD/Data/EDI2023/FCR_chem_2022.csv")
-
 
 #### FCR 
 fcr_doc <- chem %>% 
@@ -135,90 +203,27 @@ fcr_fdom_doc %>%
          Season = ifelse(Month %in% c(9,10,11), "Fall", Season),
         Season = ifelse(Month %in% c(12,1,2), "Winter", Season),
          Season = ifelse(Month %in% c(3,4,5), "Spring", Season)  ) %>% 
-  # filter(Season == "Summer") %>%
-  # filter(Year != 2020) %>% 
-  # filter(Date > ymd("2019-10-01"),
-  #        Date < ymd("2020-09-01")) %>%
-  ggplot(aes(x = value, y = DOC))+ # , color = Season
+  #filter(Year != 2020) %>% 
+  # filter(Date > ymd("2018-10-01"),
+   #       Date < ymd("2019-09-01")) %>%
+  ggplot(aes(x = fDOM_dailymean, y = DOC))+ # , color = Season
   geom_point()+
-  # stat_poly_line() +  stat_poly_eq() +
+  stat_poly_line() +  stat_poly_eq() +
   theme_bw()+
   #facet_wrap(~Year, ncol = 1)+
   ggtitle("FCR DOC~fDOM 1.6m")+
   ylab("DOC (mg/L)")+
   xlab("fDOM (QSU)")
 
-#### BVR
-bvr_doc <- chem %>% 
-  filter(Reservoir == "BVR",
-         Site == 50, 
-         Depth_m == 0.1,
-         !is.na(DOC_mgL)) %>% 
-  mutate(Date = as.Date(DateTime)) %>% 
-  filter(Date > ymd("2020-06-24")) %>% 
-  group_by(Reservoir, Date, Depth_m) %>% 
-  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
-  
-bvr_fdom_doc <- left_join(bvr_doc, bvr_dailyFDOM, by = "Date")
-
-#plot DOC~fDOM
-bvr_fdom_doc %>% 
-  ggplot(aes(x = value, y = DOC))+
-  geom_point()+
-  stat_poly_line() +
-  stat_poly_eq() +
-  theme_bw()+
-ggtitle("BVR DOC 0.1m ~ fDOM 1.5m")+
-  ylab("DOC (mg/L)")+
-  xlab("fDOM (QSU)")
-
-#### CCR
-ccr_doc <- chem %>% 
-  filter(Reservoir == "CCR",
-         Site %in% c(50,51), 
-         Depth_m == 1.5,
-         !is.na(DOC_mgL)) %>% 
-  mutate(Date = as.Date(DateTime)) %>% 
-  filter(Date > ymd("2021-06-30")) %>% 
-  group_by(Reservoir, Date, Depth_m) %>% 
-  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
-  
-ccr_dailyFDOM_1m <- ccr_dailyFDOM %>% 
-  filter(name == "fDOM1")
-  
-ccr_fdom_doc <- left_join(ccr_doc, ccr_dailyFDOM_1m, by = "Date")
-
-#plot DOC~fDOM
-ccr_fdom_doc %>% 
-  ggplot(aes(x = value, y = DOC))+
-  geom_point()+
-  stat_poly_line() +
-  stat_poly_eq() +
-  theme_bw()+
-  ggtitle("CCR DOC~fDOM 1.5m")+
-  ylab("DOC (mg/L)")+
-  xlab("fDOM (QSU)")
-
-
-
-
-#### Just DOC timeseries per reservoir 
-doc_ts <- rbind(fcr_doc, ccr_doc, bvr_doc) %>% 
-  ggplot(aes(x = Date, y = DOC))+
-  geom_point()+
-  facet_wrap(~Reservoir, ncol = 1)
-
-doc_ts
-
-
-
 ```
 
-testing regress with additonal variables
+
+
+testing FCR regress with additonal variables
 
 ```{r}
 ## just fdom to DOC regress
-summary(lm(DOC ~ value, data = fcr_fdom_doc))
+summary(lm(DOC ~ fDOM_dailymean, data = fcr_fdom_doc))
 
 ## other EXO to DOC regress 
 fcr_dailyEXO <- fcr %>% 
@@ -240,5 +245,79 @@ summary(lm(DOC ~ fDOM1 + Chla1 + TDS1, data = fcr_daily_EXO_DOC))
 ```
 
 
+BVR fDOM ~ DOC
+
+```{r}
+#### BVR
+bvr_doc <- chem %>% 
+  filter(Reservoir == "BVR",
+         Site == 50, 
+         Depth_m == 0.1,
+         !is.na(DOC_mgL)) %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  filter(Date > ymd("2020-06-24")) %>% 
+  group_by(Reservoir, Date, Depth_m) %>% 
+  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
+  
+bvr_fdom_doc <- left_join(bvr_doc, bvr_dailyFDOM, by = "Date")
+
+#plot DOC~fDOM
+bvr_fdom_doc %>% 
+  ggplot(aes(x = fDOM_dailymean, y = DOC))+
+  geom_point()+
+  stat_poly_line() +
+  stat_poly_eq() +
+  theme_bw()+
+ggtitle("BVR DOC 0.1m ~ fDOM 1.5m")+
+  ylab("DOC (mg/L)")+
+  xlab("fDOM (QSU)")
+
+```
+
+CCR fDOM ~ DOC
+
+```{r}
+#### CCR
+ccr_doc <- chem %>% 
+  filter(Reservoir == "CCR",
+         Site %in% c(50,51), 
+         Depth_m == 1.5,
+         !is.na(DOC_mgL)) %>% 
+  mutate(Date = as.Date(DateTime)) %>% 
+  filter(Date > ymd("2021-06-30")) %>% 
+  group_by(Reservoir, Date, Depth_m) %>% 
+  summarise(DOC = mean(DOC_mgL, na.rm = T), .groups = "drop")
+  
+ccr_dailyFDOM_1m <- ccr_dailyFDOM 
+    # %>%   filter(name == "fDOM1")
+  
+ccr_fdom_doc <- left_join(ccr_doc, ccr_dailyFDOM_1m, by = "Date")
+
+#plot DOC~fDOM
+ccr_fdom_doc %>% 
+  ggplot(aes(x = fDOM_dailymean, y = DOC))+
+  geom_point()+
+  stat_poly_line() +
+  stat_poly_eq() +
+  theme_bw()+
+  ggtitle("CCR DOC~fDOM 1.5m")+
+  ylab("DOC (mg/L)")+
+  xlab("fDOM (QSU)")
+
+```
+
+
+DOC timeseries 
+
+```{r}
+#### Just DOC timeseries per reservoir 
+doc_ts <- rbind(fcr_doc, ccr_doc, bvr_doc) %>% 
+  ggplot(aes(x = Date, y = DOC))+
+  geom_point()+
+  facet_wrap(~Reservoir, ncol = 1)
+
+doc_ts
+
+```
 
 
