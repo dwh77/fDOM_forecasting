@@ -150,6 +150,8 @@ plot(residuals)
 get water temp forecasts
 
 ```{r}
+### Summaries 
+
 #set url
 flare_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/summaries/?endpoint_override=renc.osn.xsede.org")
 
@@ -165,6 +167,16 @@ df_flare <- flare_all_results |>
 summary(df_flare)
 unique(df_flare$reference_datetime)
 
+### Actual forecasts 
+flare_full_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean/model_id=glm_aed_v1?endpoint_override=renc.osn.xsede.org")
+
+df_flare_full <- flare_full_all_results |>
+ dplyr::filter(#variable %in% c("Temp_C_mean"),
+               #datetime >= ymd_hms("2023-12-31 00:00:00"),
+               site_id == "fcre",   
+               depth_m == 1.6) |>
+ dplyr::collect()
+
 
 
 ```
@@ -172,13 +184,14 @@ unique(df_flare$reference_datetime)
 get NOAA forecast
 
 ```{r}
-all_results <- arrow::open_dataset("s3://anonymous@drivers/noaa/gefs-v12-reprocess/stage2/parquet?endpoint_override=s3.flare-forecast.org")|>
+noaa_all_results <- arrow::open_dataset("s3://anonymous@drivers/noaa/gefs-v12-reprocess/stage2/parquet?endpoint_override=s3.flare-forecast.org")|>
   dplyr::filter(#datetime >= ymd_hms("2021-01-01 00:00:00"), datetime <= ymd_hms("2021-12-31 23:00:00"), 
        datetime >= ymd_hms("2024-02-10 00:00:00"),
        site_id == 'fcre', 
        variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air"))
 
-df_noaa <- all_results |> dplyr::collect() 
+
+df_noaa <- noaa_all_results |> dplyr::collect() 
 
 summary(df_noaa)
 unique(df_noaa$site_id)
@@ -187,7 +200,51 @@ unique(df_noaa$variable)
 
 ```
 
+get NOAA via RopenMeteo
 
+```{r}
+#install package
+#devtools::install_github("FLARE-forecast/RopenMeteo")
+
+#adapted from FEO
+get_daily_weather <- function(current_site, site_list, past = 90, future = 30) {
+
+  lat <- site_list |>     filter(site_id == current_site) |>   select(latitude) |>  pull()
+
+  long <-  site_list |>   filter(site_id == current_site) |>    select(longitude) |>  pull()
+
+  site_weather <- RopenMeteo::get_ensemble_forecast(
+    latitude = lat,
+    longitude = long,
+    forecast_days = future, # days into the future
+    past_days = past, # past days that can be used for model fitting
+    model = "gfs_seamless"
+   # variables = c("precipitation_flux")
+    ) |>
+    RopenMeteo::convert_to_efi_standard() |>
+    mutate(site_id = current_site,
+           datetime = as_date(datetime)) |>
+    group_by(datetime, site_id, variable, parameter) |>
+    summarise(prediction = mean(prediction))
+
+  return(site_weather)
+}
+
+# site_list <- read_csv("https://raw.githubusercontent.com/LTREB-reservoirs/vera4cast/main/vera4cast_field_site_metadata.csv",
+#                       show_col_types = FALSE)
+
+fcre_weather <- get_daily_weather(current_site = 'fcre', site_list = site_list, past = 90, future = 30)
+
+#write.csv(fcre_weather, "./fcreweather_fromOpenMeteo_past90days.csv", row.names = F)
+
+fcre_weather_shortwave  <- fcre_weather |> 
+  filter(variable == "surface_downwelling_shortwave_flux_in_air")
+
+# fcre_weather_shortwave |> 
+#   ggplot(aes(x = datetime, y = prediction, color = parameter))+
+#   geom_line()
+
+```
 
 
 
