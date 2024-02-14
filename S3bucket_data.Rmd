@@ -96,7 +96,43 @@ unique(df_flare$model_id)
 
 ```
 
+## Code from Austin for pulling from flare s3 bucket 
 
+```{r}
+## pull in past NOAA data
+noaa_date <- '2022-01-01'
+
+noaa_stage2_s3 <- arrow::s3_bucket(paste0("drivers/noaa/gefs-v12-reprocess/stage2/parquet/0/",noaa_date,"/fcre"),
+                                  endpoint_override = "s3.flare-forecast.org",
+                                  anonymous = TRUE)
+
+df_noaa_stage2 <- arrow::open_dataset(noaa_stage2_s3) |> 
+  #select(datetime, parameter, variable, prediction) |> 
+  filter(variable %in% c("precipitation_flux","air_temperature")) |> 
+  collect()
+
+# stage 3
+noaa_stage3_s3 <- arrow::s3_bucket(paste0("drivers/noaa/gefs-v12-reprocess/stage3/parquet/fcre"),
+                                endpoint_override = "s3.flare-forecast.org",
+                                anonymous = TRUE)
+
+df_noaa_stage3 <- arrow::open_dataset(noaa_stage3_s3) |> 
+  #select(datetime, parameter, variable, prediction) |> 
+  filter(variable %in% c("precipitation_flux","air_temperature"),
+         datetime < lubridate::as_datetime(noaa_date)) |> 
+  collect()
+
+
+## water temperature
+s3_path <- arrow::s3_bucket(paste0("forecasts/parquet"),
+                            endpoint_override = "s3.flare-forecast.org",
+                            anonymous = TRUE)
+
+df_future <- arrow::open_dataset(s3_path) |> 
+  filter(site_id == 'fcre') |> ## filter down to smaller data
+  collect()  
+
+```
 
 
 
