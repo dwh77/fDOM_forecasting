@@ -1,0 +1,105 @@
+---
+title: "Pulling S3 data"
+author: "Dexter Howard"
+date: "2024-02-02"
+output: html_document
+---
+
+
+```{r, message = F}
+library(tidyverse)
+```
+
+VERA catalog w/ data and metadata: https://radiantearth.github.io/stac-browser/#/external/raw.githubusercontent.com/LTREB-reservoirs/vera4cast/main/catalog/catalog.json
+
+##fDOM 
+pulling fDOM data from the s3 bucket
+
+```{r}
+#get url
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+#read in data
+targets <- readr::read_csv(targets_url, show_col_types = FALSE)
+
+#explore data
+# summary(targets)
+# unique(targets$project_id)
+# unique(targets$site_id)
+# unique(targets$duration)
+ unique(targets$variable)
+
+```
+
+get all fcr fdom and truncate to 2021 for training 
+
+```{r}
+
+fcr_fdom <- targets |> 
+  filter(site_id == "fcre",
+         variable == "fDOM_QSU_mean")
+
+fcr_fdom_training <- fcr_fdom |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31"))
+  
+  
+```
+
+
+##met targets
+
+```{r}
+met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
+met_targets <- readr::read_csv(url, show_col_types = FALSE)
+
+```
+
+##NOAA met forecasts 
+
+```{r}
+#read from url and subset data so it doesn't take forever 
+noaa_all_results <- arrow::open_dataset("s3://anonymous@drivers/noaa/gefs-v12-reprocess/stage3/parquet?endpoint_override=s3.flare-forecast.org") |>
+  dplyr::filter(#datetime >= ymd_hms("2021-01-01 00:00:00"), datetime <= ymd_hms("2021-12-31 23:00:00"), 
+       datetime >= ymd_hms("2024-02-12 00:00:00"),
+       site_id == 'fcre', 
+       variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air"))
+
+df_noaa <- noaa_all_results |> dplyr::collect() 
+
+summary(df_noaa)
+unique(df_noaa$site_id)
+
+
+
+```
+
+
+##FLARE water temp forecasts 
+
+```{r}
+#get url and subset data so it doesn't take forever 
+# all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/summaries//parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean/model_id=glm_aed_v1?endpoint_override=renc.osn.xsede.org")|>
+# filter(datetime > start_date, datetime < end_date, site_id == 'fcre')
+
+flare_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/summaries/?endpoint_override=renc.osn.xsede.org")
+
+df_flare <- flare_all_results |>
+ dplyr::filter(variable %in% c("Temp_C_mean"),
+               site_id == "fcre") |>    
+               #depth_m == 1.6,
+               #model_id == "glm_aed_v1") |>
+ dplyr::collect()
+
+summary(df_flare)
+unique(df_flare$model_id)
+
+```
+
+
+
+
+
+
+
+

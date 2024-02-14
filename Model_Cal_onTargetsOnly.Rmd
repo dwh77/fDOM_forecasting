@@ -1,0 +1,195 @@
+---
+title: "Pulling S3 data"
+author: "Dexter Howard"
+date: "2024-02-02"
+output: html_document
+---
+
+
+```{r, message = F}
+library(tidyverse)
+```
+
+VERA catalog w/ data and metadata: https://radiantearth.github.io/stac-browser/#/external/raw.githubusercontent.com/LTREB-reservoirs/vera4cast/main/catalog/catalog.json
+
+## Read in and format data for model calibraton
+
+get fdom and water temp data
+
+```{r}
+#get url
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+#read in data
+targets <- readr::read_csv(targets_url, show_col_types = FALSE)
+
+#explore data
+# summary(targets)
+# unique(targets$project_id)
+# unique(targets$site_id)
+# unique(targets$duration)
+ # unique(targets$variable)
+
+#get all fcr fdom and truncate to 2021 for training 
+fcr_water <- targets |> 
+  filter(site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31"))
+
+fcr_water_wide <- fcr_water |> 
+  pivot_wider(names_from = variable, values_from = observation) |> 
+  select(datetime, Temp_C_mean, fDOM_QSU_mean)
+
+```
+
+get meteo targets
+
+```{r}
+#get data
+met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
+
+met_targets <- readr::read_csv(met_url, show_col_types = FALSE)  
+#unique(met_targets$variable)
+
+#get all fcr precip and sw and truncate to 2021 for training 
+fcr_met <- met_targets |> 
+  filter(site_id == "fcre",
+         variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum") ) |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31"))
+
+fcr_met_wide <- fcr_met |> 
+  pivot_wider(names_from = variable, values_from = observation) |> 
+  select(datetime, ShortwaveRadiationUp_Wm2_mean, Rain_mm_sum)
+
+```
+
+join water qualiyt and meteo
+
+```{r}
+#join met to water variables by date
+joined_fcr <- left_join(fcr_water_wide, fcr_met_wide, by = "datetime") |> 
+  mutate(fdom_lag1 = lag(fDOM_QSU_mean),
+         rain_lag1 = lag(Rain_mm_sum))
+summary(joined_fcr)
+
+```
+
+## old style glm model fit
+
+```{r}
+#filter out NAs from data for model fit 
+joined_fcr_noNA <- na.omit(joined_fcr)
+
+
+#develop model
+fdom_model <- lm(fDOM_QSU_mean ~ fdom_lag1 + Temp_C_mean + 
+               ShortwaveRadiationUp_Wm2_mean + Rain_mm_sum + rain_lag1,
+                  data = joined_fcr_noNA)
+
+#get model summary, parameter values and parameter SE
+summary(fdom_model)
+fdom_model_summary <- summary(fdom_model)
+
+coeffs <- round(fdom_model_summary$coefficients[,1], 2)
+param_se <- fdom_model_summary$coefficients[,2]
+
+#look at model fit
+mod <- predict(fdom_model, data = joined_fcr_noNA)
+
+
+r2 <- round(fdom_model_summary$r.squared, 2) 
+residuals <- mod - joined_fcr_noNA$fDOM_QSU_mean
+err <- mean(residuals, na.rm = TRUE) 
+rmse <- round(sqrt(mean((mod - joined_fcr_noNA$fDOM_QSU_mean)^2, na.rm = TRUE)), 2) 
+
+pred <- tibble(datetime = joined_fcr_noNA$datetime,
+               model = mod,
+               resid = residuals) 
+
+left_join(pred, joined_fcr_noNA, by = "datetime") |> 
+  ggplot()+
+  geom_point(aes(x = datetime, y = fDOM_QSU_mean, color = "obs"), color = "red")+
+  geom_line(aes(x = datetime, y = model, color = "modeled"), color = "black")+
+  theme_bw()
+
+plot(residuals)
+
+
+```
+
+## fable model fit trial
+
+```{r}
+#library(fable)
+
+#first have to get data into tsibble format
+# z <- joined_fcr |> 
+#   mutate(datetime = as.Date(datetime)) |> 
+#   as_tsibble(index = datetime)
+# 
+# 
+# fit_fdom <- z |> 
+#   model(tslm = TSLM(fDOM_QSU_mean ~ lag(fDOM_QSU_mean) + Temp_C_mean + ShortwaveRadiationUp_Wm2_mean)) 
+#   
+# report(fit_fdom)
+# 
+# # fit_fdom |> 
+# #  feasts::gg_tsresiduals()
+#   
+#   # model(arima = ARIMA(fDOM_QSU_mean ~ pdq(2,1,0)))
+
+
+```
+
+
+## Make forecasts
+
+get water temp forecasts
+
+```{r}
+#set url
+flare_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/summaries/?endpoint_override=renc.osn.xsede.org")
+
+#filter data
+df_flare <- flare_all_results |>
+ dplyr::filter(variable %in% c("Temp_C_mean"),
+               datetime >= ymd_hms("2023-12-31 00:00:00"),
+               site_id == "fcre",   
+               depth_m == 1.6,
+               model_id == "glm_aed_v1") |>
+ dplyr::collect()
+
+summary(df_flare)
+unique(df_flare$reference_datetime)
+
+
+
+```
+
+get NOAA forecast
+
+```{r}
+all_results <- arrow::open_dataset("s3://anonymous@drivers/noaa/gefs-v12-reprocess/stage2/parquet?endpoint_override=s3.flare-forecast.org")|>
+  dplyr::filter(#datetime >= ymd_hms("2021-01-01 00:00:00"), datetime <= ymd_hms("2021-12-31 23:00:00"), 
+       datetime >= ymd_hms("2024-02-10 00:00:00"),
+       site_id == 'fcre', 
+       variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air"))
+
+df_noaa <- all_results |> dplyr::collect() 
+
+summary(df_noaa)
+unique(df_noaa$site_id)
+unique(df_noaa$variable)
+
+
+```
+
+
+
+
+
+
+
