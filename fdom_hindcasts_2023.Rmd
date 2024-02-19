@@ -30,7 +30,7 @@ head(fcr_fdom_2023)
 ```
 
 
-load NOAA forecasts
+load and format NOAA forecasts
 
 ```{r}
 #read in csv generated in S3bucket_data.Rmd
@@ -39,96 +39,239 @@ noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv"
 head(noaa_csv)
 
 #exploring noaa stage 2 formating by looking at just one reference forecast date
-noaa_z <- noaa_csv |> 
-  filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"))
-
-noaa_z |> 
-  ggplot(aes(x = datetime, y = prediction, color = as.character(parameter)))+
-  geom_line()+
-  theme_bw()+
-  facet_wrap(~variable, nrow = 2, scales = "free_y")
+# noaa_z <- noaa_csv |> 
+#   filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"))
+# 
+# noaa_z |> 
+#   ggplot(aes(x = datetime, y = prediction, color = as.character(parameter)))+
+#   geom_line()+
+#   theme_bw()+
+#   facet_wrap(~variable, nrow = 2, scales = "free_y")
 
 #making data frame of daily averaged forecasts
 daily_noaa <- noaa_csv |> 
   mutate(datetime_date = as.Date(datetime)) |> 
   group_by(reference_datetime, datetime_date, variable, parameter) |> 
-  summarise(prediction_daily_mean = mean(prediction, na.rm = T), .groups = "drop")
+  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
+   filter(parameter <= 30) 
 
-
-
-#################### old code to keep incorporating 
-
-  
-
-df_noaa_midnight <- noaa_csv |> 
-  mutate(hour = hour(datetime)) |> 
-  filter(hour == 0)
-
-summary(df_noaa_midnight)
-
-z<-df_noaa_midnight |> 
-  filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"),
-         #forecast_valid == "840-841 hour ave fcst",
-         # parameter < 30,
-         variable == "surface_downwelling_shortwave_flux_in_air") |> 
-  ggplot(aes(x = datetime, y = prediction, color = as.factor(parameter)))+
-  geom_line()+
-  # guides(color = "none")+
-  theme_bw()
 
 ```
-
-
-FLARE water temp forecasts 
-
-```{r}
-#read in csv generated in S3bucket_data.Rmd
-flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
-
-
-####### copied from old script 
-summary(flare_df_future)
-flare_df_future_glm <- flare_df_future |> 
-  filter(model_id == "test_runS3")
-
-flare_df_future_glm |>  
-  filter(reference_datetime == "2023-01-01 00:00:00",
-         parameter < 30) |> 
-  ggplot(aes(x = datetime, y = prediction, color = as.factor(parameter)))+
-  geom_line()+
-  guides(color = "none")+
-  theme_bw()
-
-```
-
-
-
-
 
 understanding for loops via plots 
 
 ```{r}
-forecast_dates <- seq(ymd_hms("2023-01-01 00:00:00"), ymd_hms("2023-01-31 00:00:00"), by = "day")
+### making plot of one daily NOAA forecast 
+summary(daily_noaa)
+
+daily_noaa |> 
+  filter(reference_datetime == ymd("2023-01-01"),
+         #forecast_valid == "840-841 hour ave fcst",
+         # parameter < 30,
+         variable == "surface_downwelling_shortwave_flux_in_air") |> 
+  ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
+  geom_line()+
+  # guides(color = "none")+
+  theme_bw()
+
+### now make a for loop to make this plot for all reference dates 
+
+forecast_dates <- seq(ymd("2023-01-01"), ymd("2023-01-31"), by = "day")
 
 for (i in forecast_dates) {
   
-  print(i)
-  
 print(
-  flare_df_future_glm |>
-  filter(reference_datetime == (i),
-         parameter < 30) |>
-  ggplot(aes(x = datetime, y = prediction, color = as.factor(parameter)))+
+daily_noaa |> 
+  filter(reference_datetime == i,
+         variable == "surface_downwelling_shortwave_flux_in_air") |> 
+  ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
   geom_line()+
-  guides(color = "none")+
-    theme_bw()
+  # guides(color = "none")+
+  theme_bw()
   )
-  
   
 }
 
 
 ```
+
+load and format FLARE water temp forecasts 
+
+```{r}
+#read in csv generated in S3bucket_data.Rmd
+flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
+
+head(flare_csv)
+
+summary(flare_csv)
+
+#clean up flare forecasts to match format on noaa; filter to just 31 ensembles and just FLARE forecasts
+flare_csv_glm_daily <- flare_csv |> 
+  filter(model_id == "test_runS3",   # to remove GOTM and Simstrat 
+         parameter <= 30) |>  # to match parameter number of NOAA
+  mutate(reference_datetime = as.Date(reference_datetime)) |> 
+  select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables 
+  rename(datetime_date = datetime) #match naming
+
+
+#test plots of flare forecast 
+flare_csv_glm_daily |>  
+  filter(reference_datetime == ymd("2023-01-01")) |> 
+  ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
+  geom_line()+  # guides(color = "none")+
+  theme_bw()
+
+#run forecasts through for loop
+# for (i in forecast_dates) {
+#   print(
+#     flare_csv_glm_daily |>  
+#       filter(reference_datetime == i) |> 
+#       ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
+#       geom_line()+  # guides(color = "none")+
+#       theme_bw()
+#   )
+# }
+
+```
+
+
+## get model paramters 
+calibrate model for 2021
+
+```{r}
+#### Water Q targets
+fcr_water_wide <- readr::read_csv(targets_url, show_col_types = FALSE) |> 
+  filter(site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31")) |> 
+  pivot_wider(names_from = variable, values_from = observation) |> 
+  select(datetime, Temp_C_mean, fDOM_QSU_mean)
+
+#### Met targets 
+met_targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
+
+fcr_met_wide <- readr::read_csv(met_targets_url, show_col_types = FALSE)   |> 
+  filter(site_id == "fcre",
+         variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum") ) |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31")) |> 
+  pivot_wider(names_from = variable, values_from = observation) |> 
+  select(datetime, ShortwaveRadiationUp_Wm2_mean, Rain_mm_sum)
+
+#### Join data
+joined_fcr <- left_join(fcr_water_wide, fcr_met_wide, by = "datetime") |> 
+  mutate(fdom_lag1 = lag(fDOM_QSU_mean),
+         rain_lag1 = lag(Rain_mm_sum))
+
+#### calibrate model and get model summary, parameter values and parameter SE
+fdom_model <- lm(fDOM_QSU_mean ~ fdom_lag1 + Temp_C_mean + 
+               ShortwaveRadiationUp_Wm2_mean + Rain_mm_sum + rain_lag1,
+                  data = na.omit(joined_fcr))
+
+fdom_model_summary <- summary(fdom_model)
+
+coeffs <- round(fdom_model_summary$coefficients[,1], 2)
+param_se <- fdom_model_summary$coefficients[,2]
+
+
+
+```
+
+
+## helper functions
+
+```{r}
+##function to pull current value 
+current_value <- function(dataframe, variable, start_date){
+  
+  value <- dataframe |> 
+  mutate(datetime = as.Date(datetime)) |> 
+  filter(datetime == start_date,
+         variable == variable) |> 
+  pull(observation)
+  
+  return(value)
+  
+}
+```
+
+
+
+## run forecasts 
+
+test way to run forecast for just one reference datetime 
+
+```{r}
+##set up forecast
+forecast_start_date <- ymd("2023-01-02")
+#set inputs
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
+
+curr_fdom <- current_value(fcr_fdom_2023, "fDOM_QSU_mean", forecast_start_date)
+
+
+forecast_driver_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
+                              ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
+                              forecast_variable = "fdom",
+                              value = as.double(NA),
+                              uc_type = "driver") %>%
+  mutate(value = ifelse(forecast_date == forecast_start_date, curr_fdom, NA)) 
+
+
+for(i in 2:length(forecasted_dates)) {
+  
+  #pull prediction dataframe for the relevant date
+  fdom_pred <- forecast_driver_unc %>%
+    filter(forecast_date == forecasted_dates[i])
+  
+  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
+  met_sw_driv <- daily_noaa %>%
+    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  met_precip_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+    met_precip_lag_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i-1])
+    
+  flare_driv <- flare_csv_glm_daily %>%
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  #pull lagged fdom values
+  fdom_lag <- forecast_driver_unc %>%
+    filter(forecast_date == forecasted_dates[i-1])
+  
+  
+  # summary(fdom_model)
+  #run model
+  fdom_pred$value <- coeffs[1] + (fdom_lag$value * coeffs[2]) + (flare_driv$prediction * coeffs[3]) +
+     (met_sw_driv$prediction * coeffs[4]) + (met_precip_driv$prediction * coeffs[5]) + 
+     (met_precip_lag_driv$prediction * coeffs[6])
+  
+  #insert values back into the forecast dataframe
+  forecast_driver_unc <- forecast_driver_unc %>%
+    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
+}
+
+
+forecast_driver_unc |> 
+  filter(forecast_date > ymd("2023-01-03")) |> 
+  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+  geom_line()
+
+```
+
 
 
 
