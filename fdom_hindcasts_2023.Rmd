@@ -38,32 +38,26 @@ noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv"
 
 head(noaa_csv)
 
+#exploring noaa stage 2 formating by looking at just one reference forecast date
 noaa_z <- noaa_csv |> 
   filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"))
 
+noaa_z |> 
+  ggplot(aes(x = datetime, y = prediction, color = as.character(parameter)))+
+  geom_line()+
+  theme_bw()+
+  facet_wrap(~variable, nrow = 2, scales = "free_y")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#making data frame of daily averaged forecasts
 daily_noaa <- noaa_csv |> 
-  mutate(datetime_date)
-  group_by(datetime, variable, parameter) |> 
+  mutate(datetime_date = as.Date(datetime)) |> 
+  group_by(reference_datetime, datetime_date, variable, parameter) |> 
+  summarise(prediction_daily_mean = mean(prediction, na.rm = T), .groups = "drop")
+
+
+
+#################### old code to keep incorporating 
+
   
 
 df_noaa_midnight <- noaa_csv |> 
@@ -92,20 +86,7 @@ FLARE water temp forecasts
 flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
 
 
-```
-
-
-
-## OLD ############################################# Make forecasts
-
-take a look at data streams for making hindcasts and slightly clean up
-
-```{r}
-
-#NOAA
-
-
-#Water temp
+####### copied from old script 
 summary(flare_df_future)
 flare_df_future_glm <- flare_df_future |> 
   filter(model_id == "test_runS3")
@@ -118,8 +99,9 @@ flare_df_future_glm |>
   guides(color = "none")+
   theme_bw()
 
-
 ```
+
+
 
 
 
