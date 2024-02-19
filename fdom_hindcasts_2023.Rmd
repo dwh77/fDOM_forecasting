@@ -1,0 +1,164 @@
+---
+title: "fDOM 2023 hindcasts"
+author: "Dexter Howard"
+date: "2024-02-19"
+output: html_document
+---
+
+
+```{r, message = F}
+library(tidyverse)
+```
+
+## Set up data
+
+fdom targets data
+
+```{r}
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+#read in data
+fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |> 
+  filter(datetime >= ymd("2023-01-01"),
+         datetime < ymd("2024-01-01"),
+         site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean")) 
+
+head(fcr_fdom_2023)
+
+```
+
+
+load NOAA forecasts
+
+```{r}
+#read in csv generated in S3bucket_data.Rmd
+noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv")
+
+head(noaa_csv)
+
+noaa_z <- noaa_csv |> 
+  filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+daily_noaa <- noaa_csv |> 
+  mutate(datetime_date)
+  group_by(datetime, variable, parameter) |> 
+  
+
+df_noaa_midnight <- noaa_csv |> 
+  mutate(hour = hour(datetime)) |> 
+  filter(hour == 0)
+
+summary(df_noaa_midnight)
+
+z<-df_noaa_midnight |> 
+  filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"),
+         #forecast_valid == "840-841 hour ave fcst",
+         # parameter < 30,
+         variable == "surface_downwelling_shortwave_flux_in_air") |> 
+  ggplot(aes(x = datetime, y = prediction, color = as.factor(parameter)))+
+  geom_line()+
+  # guides(color = "none")+
+  theme_bw()
+
+```
+
+
+FLARE water temp forecasts 
+
+```{r}
+#read in csv generated in S3bucket_data.Rmd
+flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
+
+
+```
+
+
+
+## OLD ############################################# Make forecasts
+
+take a look at data streams for making hindcasts and slightly clean up
+
+```{r}
+
+#NOAA
+
+
+#Water temp
+summary(flare_df_future)
+flare_df_future_glm <- flare_df_future |> 
+  filter(model_id == "test_runS3")
+
+flare_df_future_glm |>  
+  filter(reference_datetime == "2023-01-01 00:00:00",
+         parameter < 30) |> 
+  ggplot(aes(x = datetime, y = prediction, color = as.factor(parameter)))+
+  geom_line()+
+  guides(color = "none")+
+  theme_bw()
+
+
+```
+
+
+
+understanding for loops via plots 
+
+```{r}
+forecast_dates <- seq(ymd_hms("2023-01-01 00:00:00"), ymd_hms("2023-01-31 00:00:00"), by = "day")
+
+for (i in forecast_dates) {
+  
+  print(i)
+  
+print(
+  flare_df_future_glm |>
+  filter(reference_datetime == (i),
+         parameter < 30) |>
+  ggplot(aes(x = datetime, y = prediction, color = as.factor(parameter)))+
+  geom_line()+
+  guides(color = "none")+
+    theme_bw()
+  )
+  
+  
+}
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
