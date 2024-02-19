@@ -20,7 +20,7 @@ get fdom and water temp data
 targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
 
 #read in data
-targets <- readr::read_csv(targets_url, show_col_types = FALSE)
+# targets <- readr::read_csv(targets_url, show_col_types = FALSE)
 
 #explore data
 # summary(targets)
@@ -30,14 +30,12 @@ targets <- readr::read_csv(targets_url, show_col_types = FALSE)
  # unique(targets$variable)
 
 #get all fcr fdom and truncate to 2021 for training 
-fcr_water <- targets |> 
+fcr_water_wide <- readr::read_csv(targets_url, show_col_types = FALSE) |> 
   filter(site_id == "fcre",
          depth_m == 1.6,
          variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
   filter(datetime >= ymd("2021-01-01"),
-         datetime <= ymd("2021-12-31"))
-
-fcr_water_wide <- fcr_water |> 
+         datetime <= ymd("2021-12-31")) |> 
   pivot_wider(names_from = variable, values_from = observation) |> 
   select(datetime, Temp_C_mean, fDOM_QSU_mean)
 
@@ -47,25 +45,23 @@ get meteo targets
 
 ```{r}
 #get data
-met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
+met_targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
 
-met_targets <- readr::read_csv(met_url, show_col_types = FALSE)  
+# met_targets <- readr::read_csv(met_url, show_col_types = FALSE)  
 #unique(met_targets$variable)
 
 #get all fcr precip and sw and truncate to 2021 for training 
-fcr_met <- met_targets |> 
+fcr_met_wide <- readr::read_csv(met_targets_url, show_col_types = FALSE)   |> 
   filter(site_id == "fcre",
          variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum") ) |> 
   filter(datetime >= ymd("2021-01-01"),
-         datetime <= ymd("2021-12-31"))
-
-fcr_met_wide <- fcr_met |> 
+         datetime <= ymd("2021-12-31")) |> 
   pivot_wider(names_from = variable, values_from = observation) |> 
   select(datetime, ShortwaveRadiationUp_Wm2_mean, Rain_mm_sum)
 
 ```
 
-join water qualiyt and meteo
+join water quality and meteo
 
 ```{r}
 #join met to water variables by date
