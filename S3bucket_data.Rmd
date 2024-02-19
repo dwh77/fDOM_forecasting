@@ -1,6 +1,6 @@
 ---
 title: "Pulling S3 data"
-author: "Dexter Howard"
+author: "Dexter Howard adapting ADD's code"
 date: "2024-02-02"
 output: html_document
 ---
@@ -12,7 +12,7 @@ library(tidyverse)
 
 VERA catalog w/ data and metadata: https://radiantearth.github.io/stac-browser/#/external/raw.githubusercontent.com/LTREB-reservoirs/vera4cast/main/catalog/catalog.json
 
-##fDOM 
+##fDOM targets from VERA
 pulling fDOM data from the s3 bucket
 
 ```{r}
@@ -47,7 +47,7 @@ fcr_fdom_training <- fcr_fdom |>
 ```
 
 
-##met targets
+##met targets from VERA
 
 ```{r}
 met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
@@ -55,7 +55,7 @@ met_targets <- readr::read_csv(url, show_col_types = FALSE)
 
 ```
 
-##NOAA met forecasts 
+##NOAA met forecasts from VERA
 
 ```{r}
 #read from url and subset data so it doesn't take forever 
@@ -75,7 +75,7 @@ unique(df_noaa$site_id)
 ```
 
 
-##FLARE water temp forecasts 
+##FLARE water temp forecasts from VERA
 
 ```{r}
 #get url and subset data so it doesn't take forever 
@@ -97,6 +97,7 @@ unique(df_flare$model_id)
 ```
 
 ## Code from Austin for pulling from flare s3 bucket 
+15feb2024
 
 ```{r}
 ## pull in past NOAA data
@@ -136,6 +137,159 @@ df_future <- arrow::open_dataset(s3_path) |>
 
 
 
+## DWH working on pulling data for hindcasting 
+
+get water temp forecasts from VERA
+
+```{r}
+### Summaries from VERA
+
+# #set url
+# flare_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/summaries/?endpoint_override=renc.osn.xsede.org")
+# 
+# #filter data
+# df_flare <- flare_all_results |>
+#  dplyr::filter(variable %in% c("Temp_C_mean"),
+#                datetime >= ymd_hms("2023-12-31 00:00:00"),
+#                site_id == "fcre",   
+#                depth_m == 1.6,
+#                model_id == "glm_aed_v1") |>
+#  dplyr::collect()
+# 
+# summary(df_flare)
+# unique(df_flare$reference_datetime)
+
+### Actual forecasts from VERA
+
+# flare_full_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean/model_id=glm_aed_v1?endpoint_override=renc.osn.xsede.org")
+# 
+# df_flare_full <- flare_full_all_results |>
+#  dplyr::filter(#variable %in% c("Temp_C_mean"),
+#                #datetime >= ymd_hms("2023-12-31 00:00:00"),
+#                site_id == "fcre",   
+#                depth_m == 1.6) |>
+#  dplyr::collect()
+
+```
+
+
+get water temp forecasts from FLARE s3 bucket 
+
+```{r}
+
+flare_s3_path <- arrow::s3_bucket(paste0("forecasts/parquet"),
+                            endpoint_override = "s3.flare-forecast.org",
+                            anonymous = TRUE)
+
+flare_df_future <- arrow::open_dataset(flare_s3_path) |> 
+  filter(site_id == 'fcre',
+         depth == 1.5,
+         variable == "temperature",
+         datetime >= ymd_hms("2023-01-01 00:00:00"),   # data starts at october 2022
+         datetime <= ymd_hms("2024-01-01 00:00:00")
+         ) |> ## filter down to smaller data
+  collect()  
+
+summary(flare_df_future)
+
+###write csv used in hindcasting script
+##write.csv(flare_df_future, "./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv", row.names = F)
+
+#get only forecasts that are one day ahead of reference 
+# test <- df_future |> 
+#        filter(datetime == ymd_hms(reference_datetime) + 86400) #86400 is number of seconds is a day
+
+
+```
+
+
+get NOAA forecast through VERA bucket
+
+```{r}
+noaa_all_results <- arrow::open_dataset("s3://anonymous@drivers/noaa/gefs-v12-reprocess/stage2/parquet?endpoint_override=s3.flare-forecast.org")|>
+  dplyr::filter(#datetime >= ymd_hms("2021-01-01 00:00:00"), datetime <= ymd_hms("2021-12-31 23:00:00"),
+       datetime >= ymd_hms("2023-01-01 00:00:00"),
+       datetime <= ymd_hms("2024-01-01 00:00:00"),
+       site_id == 'fcre',
+       variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air"))
+
+
+df_noaa <- noaa_all_results |> dplyr::collect()
+
+###write csv used in hindcasting script
+##write.csv(df_noaa, "./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv", row.names = F)
+
+
+summary(df_noaa)
+unique(df_noaa$site_id)
+unique(df_noaa$variable)
+
+
+```
+
+get NOAA from FLARE s3 bucket 
+
+```{r}
+# ## pull in past NOAA data
+# noaa_date <- '2023-01-01'
+# 
+# noaa_stage2_s3 <- arrow::s3_bucket(paste0("drivers/noaa/gefs-v12-reprocess/stage2/parquet/0/",noaa_date,"/fcre"),
+#                                   endpoint_override = "s3.flare-forecast.org",
+#                                   anonymous = TRUE)
+# 
+# df_noaa_stage2 <- arrow::open_dataset(noaa_stage2_s3) |> 
+#   #select(datetime, parameter, variable, prediction) |> 
+#   filter(variable %in% c("precipitation_flux","surface_downwelling_shortwave_flux_in_air")) |> 
+#   collect()
+
+```
+
+
+get NOAA via RopenMeteo
+
+```{r}
+#install package
+#devtools::install_github("FLARE-forecast/RopenMeteo")
+
+#adapted from FEO
+get_daily_weather <- function(current_site, site_list, past = 90, future = 30) {
+
+  lat <- site_list |>     filter(site_id == current_site) |>   select(latitude) |>  pull()
+
+  long <-  site_list |>   filter(site_id == current_site) |>    select(longitude) |>  pull()
+
+  site_weather <- RopenMeteo::get_ensemble_forecast(
+    latitude = lat,
+    longitude = long,
+    forecast_days = future, # days into the future
+    past_days = past, # past days that can be used for model fitting
+    model = "gfs_seamless"
+   # variables = c("precipitation_flux")
+    ) |>
+    RopenMeteo::convert_to_efi_standard() |>
+    mutate(site_id = current_site,
+           datetime = as_date(datetime)) |>
+    group_by(datetime, site_id, variable, parameter) |>
+    summarise(prediction = mean(prediction))
+
+  return(site_weather)
+}
+
+# site_list <- read_csv("https://raw.githubusercontent.com/LTREB-reservoirs/vera4cast/main/vera4cast_field_site_metadata.csv",
+#                       show_col_types = FALSE)
+
+# fcre_weather <- get_daily_weather(current_site = 'fcre', site_list = site_list, past = 90, future = 30)
+
+##write.csv(fcre_weather, "./GeneratedData/fcreweather_fromOpenMeteo_past90days.csv", row.names = F)
+
+# fcre_weather_shortwave  <- fcre_weather |> 
+#   filter(variable == "surface_downwelling_shortwave_flux_in_air")
+
+# fcre_weather_shortwave |> 
+#   ggplot(aes(x = datetime, y = prediction, color = parameter))+
+#   geom_line()
+
+```
 
 
 
