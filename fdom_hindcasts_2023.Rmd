@@ -201,6 +201,12 @@ residuals <- mod - joined_fcr_noNA$fDOM_QSU_mean
 sigma <- sd(residuals, na.rm = TRUE) # Process Uncertainty Noise Std Dev.; this is your sigma
 
 
+####set up IC uncert 
+ic_sd <- 0.1 #adpating from HLWs temp 4cast using 0.1 and detection limit on fDOM sensor being 0.07 QSU
+ic_uc <- rnorm(n = 30, mean = mean(fcr_fdom_2023$observation, na.rm = T), sd = ic_sd)
+hist(ic_uc)
+
+
 ```
 
 
@@ -218,8 +224,12 @@ current_value <- function(dataframe, variable, start_date){
   pull(observation)
   
   return(value)
-  
 }
+
+get_IC_uncert <- function(curr_fdom, n_members, ic_sd = 0.1){
+  rnorm(n = n_members, mean = curr_fdom, sd = ic_sd)
+}
+
 ```
 
 main fDOM function 
@@ -354,13 +364,19 @@ forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start
 
 curr_fdom <- current_value(fcr_fdom_2023, "fDOM_QSU_mean", forecast_start_date)
 
+ic_df <- tibble(forecast_date = rep(as.Date(forecast_start_date), times = n_members),
+                ensemble_member = c(1:n_members),
+                forecast_variable = "fdom",
+                value = get_IC_uncert(curr_fdom, n_members, ic_sd = 0.1),
+                uc_type = "total")
 
 forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
                               ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
                               forecast_variable = "fdom",
                               value = as.double(NA),
-                              uc_type = "total") %>%
-  mutate(value = ifelse(forecast_date == forecast_start_date, curr_fdom, NA)) 
+                              uc_type = "total") |> 
+  #mutate(value = ifelse(forecast_date == forecast_start_date, curr_fdom, NA)) 
+  rows_update(ic_df, by = c("forecast_date","ensemble_member","forecast_variable", "uc_type")) # adding IC uncert
 
 
 for(i in 2:length(forecasted_dates)) {
@@ -408,7 +424,14 @@ for(i in 2:length(forecasted_dates)) {
   } #inner for loop
 
 
-forecast_full_unc_Y <- forecast_full_unc
+forecast_full_unc_X <- forecast_full_unc
+
+forecast_full_unc_X
+
+forecast_full_unc_X |>
+  filter(forecast_date > ymd("2023-01-03")) |>
+  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+  geom_line()
 
 forecast_full_unc_Y
 
