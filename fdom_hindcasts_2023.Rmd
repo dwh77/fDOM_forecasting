@@ -508,11 +508,25 @@ output_stats <- left_join(output_all, fcr_fdom_2023_forjoin, by = c("forecast_da
 #rmse
 output_stats |> 
   group_by(Horizon, Season) |> 
+  summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) 
+
+output_stats |> 
+  group_by(Horizon, Season) |> 
   summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
   ggplot(aes(x = Horizon, y = rmse, color = Season))+
   geom_line(linewidth = 1.5)+
   geom_point()+
   ggtitle("RMSE by season")+
+  theme_bw()
+
+#sd
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(sd = sd(value, na.rm = T)) |> 
+  ggplot(aes(x = Horizon, y = sd, color = Season))+
+  geom_line(linewidth = 1.5)+
+  geom_point()+
+  ggtitle("SD by season")+
   theme_bw()
 
 #resid mean over horizon
@@ -526,10 +540,11 @@ output_stats |>
   theme_bw()
 
 
+#boxplot trial
 output_stats |> 
-  ggplot(aes(x = Horizon, y = resid, color = Season))+
-  geom_boxplot()+
-  geom_jitter()+
+  ggplot()+
+  geom_boxplot(aes(x = as.factor(Horizon), y = resid, color = Season))+
+  # geom_jitter()+
   ggtitle("residual by season")+
   theme_bw()
 
