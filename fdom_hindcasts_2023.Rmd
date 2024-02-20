@@ -173,8 +173,21 @@ fdom_model <- lm(fDOM_QSU_mean ~ fdom_lag1 + Temp_C_mean +
 fdom_model_summary <- summary(fdom_model)
 
 coeffs <- round(fdom_model_summary$coefficients[,1], 2)
-param_se <- fdom_model_summary$coefficients[,2]
+params_se <- fdom_model_summary$coefficients[,2]
 
+#get param distribtuions for parameter uncertainity 
+param_df <- data.frame(beta1 = rnorm(30, coeffs[1], params_se[1]),
+                       beta2 = rnorm(30, coeffs[2], params_se[2]),
+                       beta3 = rnorm(30, coeffs[3], params_se[3]),
+                       beta4 = rnorm(30, coeffs[4], params_se[4]),
+                       beta5 = rnorm(30, coeffs[5], params_se[5]),
+                       beta6 = rnorm(30, coeffs[6], params_se[6])
+                       )
+#plot params
+param_df |> mutate(colnum = 1) |> select(colnum, everything()) |>  pivot_longer(-1) |> 
+  ggplot()+
+  geom_density(aes(value))+
+  facet_wrap(~name, scales = "free")
 
 
 ```
@@ -315,6 +328,91 @@ for (j in 2:length(forecast_start_date)) {
 
 
 ##trials
+
+try adding all uncert sources
+
+```{r}
+##set up forecast
+ forecast_start_date <- ymd("2023-01-02")
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+
+
+
+forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
+
+curr_fdom <- current_value(fcr_fdom_2023, "fDOM_QSU_mean", forecast_start_date)
+
+
+forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
+                              ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
+                              forecast_variable = "fdom",
+                              value = as.double(NA),
+                              uc_type = "total") %>%
+  mutate(value = ifelse(forecast_date == forecast_start_date, curr_fdom, NA)) 
+
+
+for(i in 2:length(forecasted_dates)) {
+  
+  #pull prediction dataframe for the relevant date
+  fdom_pred <- forecast_full_unc %>%
+    filter(forecast_date == forecasted_dates[i])
+  
+  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
+  met_sw_driv <- daily_noaa %>%
+    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  met_precip_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+    met_precip_lag_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i-1])
+    
+  flare_driv <- flare_csv_glm_daily %>%
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  #pull lagged fdom values
+  fdom_lag <- forecast_full_unc %>%
+    filter(forecast_date == forecasted_dates[i-1])
+  
+  
+  # summary(fdom_model)
+  #run model
+  fdom_pred$value <- param_df$beta1 + (fdom_lag$value * param_df$beta2) + (flare_driv$prediction * param_df$beta3) +
+     (met_sw_driv$prediction * param_df$beta4) + (met_precip_driv$prediction * param_df$beta5) + 
+     (met_precip_lag_driv$prediction * param_df$beta6)
+  
+  #insert values back into the forecast dataframe
+  forecast_full_unc <- forecast_full_unc %>%
+    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
+  
+  } #inner for loop
+
+
+forecast_full_unc_Z <- forecast_full_unc
+
+forecast_full_unc_Z
+
+forecast_full_unc_Z |>
+  filter(forecast_date > ymd("2023-01-03")) |>
+  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+  geom_line()
+
+forecast_driver_unc_Z
+
+forecast_driver_unc_Z |>
+  filter(forecast_date > ymd("2023-01-03")) |>
+  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+  geom_line()
+
+```
 
 
 
