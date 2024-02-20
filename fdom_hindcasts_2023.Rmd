@@ -395,7 +395,7 @@ forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_memb
   } #end for loop
   
   
-return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/forecast_full_unc_", forecast_start_date, '.csv'))
+return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/20feb24_1154am/forecast_full_unc_", forecast_start_date, '.csv'))
 )
   
 }#end function
@@ -427,7 +427,7 @@ return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/foreca
 running for loop over fdom_forecast function
 ```{r}
 ## set up dates for for loop
-forecast_start_date <- seq(ymd("2023-01-02"), ymd("2023-01-05"), by = "day")
+forecast_start_date <- seq(ymd("2023-02-20"), ymd("2023-12-31"), by = "day")
 
 ##set up inputs to function
 variable <- "fDOM_QSU_mean"
@@ -446,6 +446,8 @@ for (j in 1:length(forecast_start_date)) {
 
 }
 
+#loop broke on 19 Feb and at 16 Dec onwards. 16 Dec is missing input after trimming to 2023 I think. 
+#Need to look into issue on 19Feb
 
 ```
 
