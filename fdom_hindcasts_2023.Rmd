@@ -166,15 +166,19 @@ joined_fcr <- left_join(fcr_water_wide, fcr_met_wide, by = "datetime") |>
          rain_lag1 = lag(Rain_mm_sum))
 
 #### calibrate model and get model summary, parameter values and parameter SE
+joined_fcr_noNA <- na.omit(joined_fcr)
+
 fdom_model <- lm(fDOM_QSU_mean ~ fdom_lag1 + Temp_C_mean + 
                ShortwaveRadiationUp_Wm2_mean + Rain_mm_sum + rain_lag1,
-                  data = na.omit(joined_fcr))
+                  data = joined_fcr_noNA)
 
 fdom_model_summary <- summary(fdom_model)
 
 coeffs <- round(fdom_model_summary$coefficients[,1], 2)
 params_se <- fdom_model_summary$coefficients[,2]
 
+
+#### get param uncertainty
 #get param distribtuions for parameter uncertainity 
 param_df <- data.frame(beta1 = rnorm(30, coeffs[1], params_se[1]),
                        beta2 = rnorm(30, coeffs[2], params_se[2]),
@@ -188,6 +192,13 @@ param_df |> mutate(colnum = 1) |> select(colnum, everything()) |>  pivot_longer(
   ggplot()+
   geom_density(aes(value))+
   facet_wrap(~name, scales = "free")
+
+
+####get process uncertainty
+#find residuals
+mod <- predict(fdom_model, data = joined_fcr_noNA)
+residuals <- mod - joined_fcr_noNA$fDOM_QSU_mean
+sigma <- sd(residuals, na.rm = TRUE) # Process Uncertainty Noise Std Dev.; this is your sigma
 
 
 ```
@@ -387,7 +398,8 @@ for(i in 2:length(forecasted_dates)) {
   #run model
   fdom_pred$value <- param_df$beta1 + (fdom_lag$value * param_df$beta2) + (flare_driv$prediction * param_df$beta3) +
      (met_sw_driv$prediction * param_df$beta4) + (met_precip_driv$prediction * param_df$beta5) + 
-     (met_precip_lag_driv$prediction * param_df$beta6)
+     (met_precip_lag_driv$prediction * param_df$beta6) +
+     rnorm(n = 30, mean = 0, sd = sigma) #process uncert
   
   #insert values back into the forecast dataframe
   forecast_full_unc <- forecast_full_unc %>%
@@ -396,7 +408,15 @@ for(i in 2:length(forecasted_dates)) {
   } #inner for loop
 
 
-forecast_full_unc_Z <- forecast_full_unc
+forecast_full_unc_Y <- forecast_full_unc
+
+forecast_full_unc_Y
+
+forecast_full_unc_Y |>
+  filter(forecast_date > ymd("2023-01-03")) |>
+  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+  geom_line()
+
 
 forecast_full_unc_Z
 
