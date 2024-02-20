@@ -452,7 +452,93 @@ for (j in 1:length(forecast_start_date)) {
 ```
 
 
-##trials
+## anlayze forecast outputs 
+
+read in forecast outputs
+```{r}
+#bind forecast outputs into one data frame 
+output_all <- list.files(path = "./ASLO_forecast_output/20feb24_1154am", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows() |> 
+  select(-1) #remove row number, need to remove this function
+
+head(output_all)
+
+```
+
+make pdf plot of all forecasts generated 
+```{r}
+#facet for all forecasts
+pdf("./ASLO_forecast_output/all_forecasts.pdf", height = 250)
+
+output_all |> 
+  mutate(Horizon = Horizon*-1) |> 
+  # filter(reference_datetime == ymd("2023-01-05")) |> 
+  ggplot(aes(x = Horizon, y = value, color = as.character(ensemble_member)))+
+  geom_line()+
+  facet_wrap(~reference_datetime, ncol = 4)+
+  guides(color = "none")+
+  theme_bw()
+
+dev.off()
+
+```
+
+look at rmse or stats or something
+
+```{r}
+#bind in observed fdom 
+head(fcr_fdom_2023)
+fcr_fdom_2023_forjoin <- fcr_fdom_2023 |> 
+  mutate(datetime = as.Date(datetime)) |> 
+  select(datetime, observation) |> rename(fdom_observed = observation)
+
+head(output_all)
+
+output_stats <- left_join(output_all, fcr_fdom_2023_forjoin, by = c("forecast_date" = "datetime")) |> 
+  mutate(resid = fdom_observed - value,
+         Horizon = Horizon*-1) |> 
+  mutate(Julian = yday(forecast_date),
+         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+         )
+
+#rmse
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
+  ggplot(aes(x = Horizon, y = rmse, color = Season))+
+  geom_line(linewidth = 1.5)+
+  geom_point()+
+  ggtitle("RMSE by season")+
+  theme_bw()
+
+#resid mean over horizon
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  mutate(resid = mean(resid, na.rm = T) ) |> 
+  ggplot(aes(x = Horizon, y = resid, color = Season))+
+  geom_line(linewidth = 1.5)+
+  geom_point()+
+  ggtitle("residual by season")+
+  theme_bw()
+
+
+output_stats |> 
+  ggplot(aes(x = Horizon, y = resid, color = Season))+
+  geom_boxplot()+
+  geom_jitter()+
+  ggtitle("residual by season")+
+  theme_bw()
+
+
+
+```
+
+
+## forecast model trials
 
 works: adding all uncert sources
 
