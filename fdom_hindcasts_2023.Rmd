@@ -226,18 +226,19 @@ current_value <- function(dataframe, variable, start_date){
   return(value)
 }
 
+#function to generate 30 ensembles of fDOM IC based on standard deviation arround current observation
 get_IC_uncert <- function(curr_fdom, n_members, ic_sd = 0.1){
   rnorm(n = n_members, mean = curr_fdom, sd = ic_sd)
 }
 
 ```
 
-main fDOM function 
+fDOM function with just driver uncert
 
 ```{r}
 #function to run an fdom forecast for one reference day 
 
-fdom_forecast <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
+fdom_forecast_driver_uncert <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
                           fdom_IC_df, noaa_df, flare_df){
   
     #establish forecasted dates
@@ -318,6 +319,107 @@ fdom_forecast(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_d
 
 ```
 
+fDOM function with full uncert
+
+```{r}
+#function to run an fdom forecast for one reference day 
+
+fdom_forecast_full_uncert <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
+                          fdom_IC_df, noaa_df, flare_df){
+  
+    #establish forecasted dates
+  forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
+
+  #get current fdom value
+  curr_fdom <- current_value(fdom_IC_df, variable, forecast_start_date)
+  
+  #set up df of different initial conditions for IC uncert
+  ic_df <- tibble(forecast_date = rep(as.Date(forecast_start_date), times = n_members),
+                ensemble_member = c(1:n_members),
+                forecast_variable = "fdom",
+                value = get_IC_uncert(curr_fdom, n_members, ic_sd = 0.1),
+                uc_type = "total")
+
+  #set up table to hold forecast output 
+forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
+                              ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
+                              reference_datetime = forecast_start_date,
+                              Horizon = reference_datetime - forecast_date,
+                              forecast_variable = "fdom",
+                              value = as.double(NA),
+                              uc_type = "total") |> 
+  rows_update(ic_df, by = c("forecast_date","ensemble_member","forecast_variable", "uc_type")) # adding IC uncert
+  
+  
+  #for loop to run forecast 
+  for(i in 2:length(forecasted_dates)) {
+  
+  #pull prediction dataframe for the relevant date
+  fdom_pred <- forecast_full_unc %>%
+    filter(forecast_date == forecasted_dates[i])
+  
+  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
+  met_sw_driv <- daily_noaa %>%
+    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  met_precip_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+    met_precip_lag_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i-1])
+    
+  flare_driv <- flare_csv_glm_daily %>%
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  #pull lagged fdom values
+  fdom_lag <- forecast_full_unc %>%
+    filter(forecast_date == forecasted_dates[i-1])
+  
+  #run model
+  fdom_pred$value <- param_df$beta1 + (fdom_lag$value * param_df$beta2) + (flare_driv$prediction * param_df$beta3) +
+     (met_sw_driv$prediction * param_df$beta4) + (met_precip_driv$prediction * param_df$beta5) + 
+     (met_precip_lag_driv$prediction * param_df$beta6) +
+     rnorm(n = 30, mean = 0, sd = sigma) #process uncert
+  
+  #insert values back into the forecast dataframe
+  forecast_full_unc <- forecast_full_unc %>%
+    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
+  
+  } #end for loop
+  
+  
+return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/forecast_full_unc_", forecast_start_date, '.csv'))
+)
+  
+}#end function
+
+#### test function 
+
+##set up forecast
+ forecast_start_date <- ymd("2023-01-02")
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+
+fdom_forecast_full_uncert(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
+              n_members = n_members, forecast_horizon = forecast_horizon,
+                          fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily)
+
+#look at plot
+read.csv("./ASLO_forecast_output/forecast_full_unc_2023-01-02.csv") |> 
+  mutate(forecast_date = as.Date(forecast_date)) |> 
+    # filter(forecast_date > ymd("2023-01-03")) |>
+  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+  geom_line()
+
+
+```
 
 
 ## run forecasts 
@@ -350,7 +452,7 @@ for (j in 2:length(forecast_start_date)) {
 
 ##trials
 
-try adding all uncert sources
+works: try adding all uncert sources
 
 ```{r}
 ##set up forecast
@@ -429,31 +531,10 @@ forecast_full_unc_X <- forecast_full_unc
 forecast_full_unc_X
 
 forecast_full_unc_X |>
-  filter(forecast_date > ymd("2023-01-03")) |>
+  # filter(forecast_date > ymd("2023-01-03")) |>
   ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
   geom_line()
 
-forecast_full_unc_Y
-
-forecast_full_unc_Y |>
-  filter(forecast_date > ymd("2023-01-03")) |>
-  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-  geom_line()
-
-
-forecast_full_unc_Z
-
-forecast_full_unc_Z |>
-  filter(forecast_date > ymd("2023-01-03")) |>
-  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-  geom_line()
-
-forecast_driver_unc_Z
-
-forecast_driver_unc_Z |>
-  filter(forecast_date > ymd("2023-01-03")) |>
-  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-  geom_line()
 
 ```
 
