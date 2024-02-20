@@ -180,8 +180,9 @@ param_se <- fdom_model_summary$coefficients[,2]
 ```
 
 
-## helper functions
+## Functions
 
+helper functions 
 ```{r}
 ##function to pull current value 
 current_value <- function(dataframe, variable, start_date){
@@ -197,114 +198,15 @@ current_value <- function(dataframe, variable, start_date){
 }
 ```
 
-
-
-## run forecasts 
-
-trying for multiple reference dates, currently works but overwrites itself 
+main fDOM function 
 
 ```{r}
-##set up forecast
-forecast_start_date <- seq(ymd("2023-01-02"), ymd("2023-01-31"), by = "day")
-n_members <- 1
-forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
-
-# forecast_driver_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
-#                               ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
-#                               refernence_datetime = NA,
-#                               forecast_variable = "fdom",
-#                               value = as.double(NA),
-#                               uc_type = "driver") 
-  # mutate(value = ifelse(forecast_date == forecast_start_date[j], curr_fdom, NA)) 
-
-forecast_driver_unc <- tibble(forecast_date = rep(NA, times = length(forecast_start_date) * forecast_horizon),
-                              ensemble_member = NA,
-                              refernence_datetime = NA,
-                              forecast_variable = "fdom",
-                              value = as.double(NA),
-                              uc_type = "driver") 
-
-for (j in 2:length(forecast_start_date)) {
-  
-
-# forecasted_dates <- seq(from = ymd(forecast_start_date[j]), to = ymd(forecast_start_date[j]) + forecast_horizon, by = "day")
-# 
-# curr_fdom <- current_value(fcr_fdom_2023, "fDOM_QSU_mean", forecast_start_date[j])
-
-
-}
-
-for(i in 2:length(forecasted_dates)) {
-  
-  #pull prediction dataframe for the relevant date
-  fdom_pred <- forecast_driver_unc %>%
-    filter(forecast_date == forecasted_dates[i])
-  
-  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
-  met_sw_driv <- daily_noaa %>%
-    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
-    filter(reference_datetime == forecast_start_date[j]) |> 
-    filter(datetime_date == forecasted_dates[i])
-  
-  met_precip_driv <- daily_noaa %>%
-    filter(variable == "precipitation_flux") |> 
-    filter(reference_datetime == forecast_start_date[j]) |> 
-    filter(datetime_date == forecasted_dates[i])
-  
-    met_precip_lag_driv <- daily_noaa %>%
-    filter(variable == "precipitation_flux") |> 
-    filter(reference_datetime == forecast_start_date[j]) |> 
-    filter(datetime_date == forecasted_dates[i-1])
-    
-  flare_driv <- flare_csv_glm_daily %>%
-    filter(reference_datetime == forecast_start_date[j]) |> 
-    filter(datetime_date == forecasted_dates[i])
-  
-  #pull lagged fdom values
-  fdom_lag <- forecast_driver_unc %>%
-    filter(forecast_date == forecasted_dates[i-1])
-  
-  
-  # summary(fdom_model)
-  #run model
-  fdom_pred$value <- coeffs[1] + (fdom_lag$value * coeffs[2]) + (flare_driv$prediction * coeffs[3]) +
-     (met_sw_driv$prediction * coeffs[4]) + (met_precip_driv$prediction * coeffs[5]) + 
-     (met_precip_lag_driv$prediction * coeffs[6])
-  
-  #insert values back into the forecast dataframe
-  forecast_driver_unc <- forecast_driver_unc %>%
-    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
-  
-  } #inner for loop
-
-
-} #outer for loop
-
-
-forecast_driver_unc |>
-  filter(forecast_date > ymd("2023-01-03")) |>
-  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-  geom_line()
-
-
-```
-
-
-make a function
-
-```{r}
-##set up forecast
- forecast_start_date <- ymd("2023-01-02")
-n_members <- 30
-forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
-
-
 #function to run an fdom forecast for one reference day 
 
 fdom_forecast <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
                           fdom_IC_df, noaa_df, flare_df){
   
-  #establish forecasted dates
+    #establish forecasted dates
   forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
 
   #get current fdom value
@@ -352,8 +254,6 @@ fdom_forecast <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_mem
   fdom_lag <- forecast_driver_unc %>%
     filter(forecast_date == forecasted_dates[i-1])
   
-  
-  # summary(fdom_model)
   #run model
   fdom_pred$value <- coeffs[1] + (fdom_lag$value * coeffs[2]) + (flare_driv$prediction * coeffs[3]) +
      (met_sw_driv$prediction * coeffs[4]) + (met_precip_driv$prediction * coeffs[5]) + 
@@ -366,63 +266,59 @@ fdom_forecast <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_mem
   } #end for loop
   
   
-# paste("forecast_driver_unc", forecast_start_date, sep = "_") <- forecast_driver_unc
-  
-# return(forecast_driver_unc)
-#   
-# return(forecast_driver_unc |>
-#   # filter(forecast_date > ymd("2023-01-03")) |>
-#   ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-#   geom_line())
-  
 return(write.csv(forecast_driver_unc, file = paste0("./ASLO_forecast_output/forecast_driver_unc_", forecast_start_date, '.csv'))
 )
   
 }#end function
 
-##test function 
+#### test function 
+
+##set up forecast
+ forecast_start_date <- ymd("2023-01-02")
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+
 fdom_forecast(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
               n_members = n_members, forecast_horizon = forecast_horizon,
                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily)
-
-
-
-forecast_driver_unc_Z <- forecast_driver_unc
-
-forecast_driver_unc_Z |>
-  filter(forecast_date > ymd("2023-01-03")) |>
-  ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-  geom_line()
 
 ```
 
 
 
+## run forecasts 
+
+running for loop over fdom_forecast function
+```{r}
+## set up dates for for loop
+forecast_start_date <- seq(ymd("2023-01-02"), ymd("2023-01-31"), by = "day")
+
+##set up inputs to function
+variable <- "fDOM_QSU_mean"
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+fdom_IC_df <- fcr_fdom_2023
+noaa_df <- daily_noaa
+flare_df <- flare_csv_glm_daily
+
+
+for (j in 2:length(forecast_start_date)) {
+  
+  fdom_forecast(variable, forecast_start_date[j], 
+              n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df)
+
+
+}
+
+
+```
+
+
+##trials
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-works: test way to run forecast for just one reference datetime 
+works: test way to run forecast for just one reference datetime with just driver uncertainty
 ```{r}
 ##set up forecast
  forecast_start_date <- ymd("2023-01-02")
