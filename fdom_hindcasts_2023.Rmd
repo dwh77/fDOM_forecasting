@@ -438,9 +438,9 @@ noaa_df <- daily_noaa
 flare_df <- flare_csv_glm_daily
 
 
-for (j in 2:length(forecast_start_date)) {
+for (j in 1:length(forecast_start_date)) {
   
-  fdom_forecast(variable, forecast_start_date[j], 
+  fdom_forecast_full_uncert(variable, forecast_start_date[j], 
               n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df)
 
 
