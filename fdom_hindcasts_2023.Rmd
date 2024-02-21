@@ -498,6 +498,7 @@ head(output_all)
 output_stats <- left_join(output_all, fcr_fdom_2023_forjoin, by = c("forecast_date" = "datetime")) |> 
   mutate(resid = fdom_observed - value,
          Horizon = Horizon*-1) |> 
+  filter(Horizon > 0) |> 
   mutate(Julian = yday(forecast_date),
          Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
          Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
@@ -510,45 +511,48 @@ output_stats |>
   group_by(Horizon, Season) |> 
   summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) 
 
+# rmse <- 
 output_stats |> 
   group_by(Horizon, Season) |> 
   summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
   ggplot(aes(x = Horizon, y = rmse, color = Season))+
-  geom_line(linewidth = 1.5)+
-  geom_point()+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
   ggtitle("RMSE by season")+
-  theme_bw()
+  theme_bw() + theme(legend.position = "top")
 
-#sd
+#sd <- 
 output_stats |> 
   group_by(Horizon, Season) |> 
   summarise(sd = sd(value, na.rm = T)) |> 
-  ggplot(aes(x = Horizon, y = sd, color = Season))+
-  geom_line(linewidth = 1.5)+
-  geom_point()+
+  ggplot(aes(x = Horizon, y = sd, color = Season ))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
   ggtitle("SD by season")+
-  theme_bw()
+  theme_bw() + theme(legend.position = "top")
 
 #resid mean over horizon
 output_stats |> 
   group_by(Horizon, Season) |> 
   mutate(resid = mean(resid, na.rm = T) ) |> 
   ggplot(aes(x = Horizon, y = resid, color = Season))+
-  geom_line(linewidth = 1.5)+
+  geom_line(linewidth = 1.2)+
   geom_point()+
   ggtitle("residual by season")+
   theme_bw()
 
 
-#boxplot trial
-output_stats |> 
-  ggplot()+
-  geom_boxplot(aes(x = as.factor(Horizon), y = resid, color = Season))+
-  # geom_jitter()+
-  ggtitle("residual by season")+
-  theme_bw()
+# #boxplot trial
+# output_stats |> 
+#   ggplot()+
+#   geom_boxplot(aes(x = as.factor(Horizon), y = resid))+
+#   # geom_jitter()+
+#   ggtitle("residual by season")+
+#   theme_bw()
 
+library(patchwork)
 
+# rmse | sd
 
 ```
 
