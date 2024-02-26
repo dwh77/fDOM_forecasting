@@ -15,15 +15,25 @@ library(tidyverse)
 fdom targets data
 
 ```{r}
-targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+### Read directly from S3
+# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+# 
+# #read in data
+# fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |> 
+#   filter(datetime >= ymd("2023-01-01"),
+#          datetime < ymd("2024-01-01"),
+#          site_id == "fcre",
+#          depth_m == 1.6,
+#          variable %in% c("fDOM_QSU_mean")) 
 
-#read in data
-fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |> 
+###Read from local saved copy while S3 is down
+fcr_fdom_2023 <- read.csv("../Data/GeneratedData/all_water_targets_from_VERAbucket_21feb24.csv") |> 
   filter(datetime >= ymd("2023-01-01"),
          datetime < ymd("2024-01-01"),
          site_id == "fcre",
          depth_m == 1.6,
-         variable %in% c("fDOM_QSU_mean")) 
+         variable %in% c("fDOM_QSU_mean"))
+  
 
 #head(fcr_fdom_2023)
 
@@ -33,64 +43,24 @@ fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
 load and format NOAA forecasts
 
 ```{r}
+###prior when using hourly csv the average to daily 
 #read in csv generated in S3bucket_data.Rmd
-noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv")
+# noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv") #first trial 
 
 #head(noaa_csv)
 
-#exploring noaa stage 2 formating by looking at just one reference forecast date
-# noaa_z <- noaa_csv |> 
-#   filter(reference_datetime == ymd_hms("2023-01-01 00:00:00"))
-# 
-# noaa_z |> 
-#   ggplot(aes(x = datetime, y = prediction, color = as.character(parameter)))+
-#   geom_line()+
-#   theme_bw()+
-#   facet_wrap(~variable, nrow = 2, scales = "free_y")
+# #making data frame of daily averaged forecasts from prior csv
+# daily_noaa <- noaa_csv |> 
+#   mutate(datetime_date = as.Date(datetime)) |> 
+#   group_by(reference_datetime, datetime_date, variable, parameter) |> 
+#   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
+#    filter(parameter <= 30) 
 
-#making data frame of daily averaged forecasts
-daily_noaa <- noaa_csv |> 
-  mutate(datetime_date = as.Date(datetime)) |> 
-  group_by(reference_datetime, datetime_date, variable, parameter) |> 
-  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
-   filter(parameter <= 30) 
-
-
-```
-
-understanding for loops via plots 
-
-```{r}
-# ### making plot of one daily NOAA forecast 
-# summary(daily_noaa)
-# 
-# daily_noaa |> 
-#   filter(reference_datetime == ymd("2023-01-01"),
-#          #forecast_valid == "840-841 hour ave fcst",
-#          # parameter < 30,
-#          variable == "surface_downwelling_shortwave_flux_in_air") |> 
-#   ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
-#   geom_line()+
-#   # guides(color = "none")+
-#   theme_bw()
-# 
-# ### now make a for loop to make this plot for all reference dates 
-# 
-# forecast_dates <- seq(ymd("2023-01-01"), ymd("2023-01-31"), by = "day")
-# 
-# for (i in forecast_dates) {
-#   
-# print(
-# daily_noaa |> 
-#   filter(reference_datetime == i,
-#          variable == "surface_downwelling_shortwave_flux_in_air") |> 
-#   ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
-#   geom_line()+
-#   # guides(color = "none")+
-#   theme_bw()
-#   )
-#   
-# }
+### working of already daily averaged csv
+daily_noaa <- read_csv("../Data/GeneratedData/NOAA_stage2data_allyears_averagedTOdaily_SW_precip_fromVERAs3bucket.csv") |> 
+  filter(reference_datetime >= ymd("2023-01-01"),
+         reference_datetime <= ymd("2024-01-01"),
+         parameter <= 30)
 
 
 ```
@@ -98,39 +68,32 @@ understanding for loops via plots
 load and format FLARE water temp forecasts 
 
 ```{r}
-#read in csv generated in S3bucket_data.Rmd
-flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
+### old 
+# #read in csv generated in S3bucket_data.Rmd
+# flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
+# 
+# head(flare_csv)
+# 
+# summary(flare_csv)
+# 
+# #clean up flare forecasts to match format on noaa; filter to just 31 ensembles and just FLARE forecasts
+# flare_csv_glm_daily <- flare_csv |> 
+#   filter(model_id == "test_runS3",   # to remove GOTM and Simstrat 
+#          parameter <= 30) |>  # to match parameter number of NOAA
+#   mutate(reference_datetime = as.Date(reference_datetime)) |> 
+#   select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables 
+#   rename(datetime_date = datetime) #match naming
 
-head(flare_csv)
+###new read in for when S3 buckt is down
 
-summary(flare_csv)
-
-#clean up flare forecasts to match format on noaa; filter to just 31 ensembles and just FLARE forecasts
-flare_csv_glm_daily <- flare_csv |> 
-  filter(model_id == "test_runS3",   # to remove GOTM and Simstrat 
+flare_csv_glm_daily <- read_csv("../Data/GeneratedData/FLARE_forecasts_FCR_allyears_waterTemp_1_5m_fromFlareS3bucket.csv") |> 
+  filter(model_id == "test_runS3",   # to remove GOTM and Simstrat
          parameter <= 30) |>  # to match parameter number of NOAA
-  mutate(reference_datetime = as.Date(reference_datetime)) |> 
-  select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables 
-  rename(datetime_date = datetime) #match naming
-
-
-#test plots of flare forecast 
-# flare_csv_glm_daily |>  
-#   filter(reference_datetime == ymd("2023-01-01")) |> 
-#   ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
-#   geom_line()+  # guides(color = "none")+
-#   theme_bw()
-
-#run forecasts through for loop
-# for (i in forecast_dates) {
-#   print(
-#     flare_csv_glm_daily |>  
-#       filter(reference_datetime == i) |> 
-#       ggplot(aes(x = datetime_date, y = prediction, color = as.factor(parameter)))+
-#       geom_line()+  # guides(color = "none")+
-#       theme_bw()
-#   )
-# }
+  mutate(reference_datetime = as.Date(reference_datetime)) |>
+  select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables
+  rename(datetime_date = datetime) |>  #match naming
+    filter(reference_datetime >= ymd("2023-01-01"),
+         reference_datetime <= ymd("2024-01-01"))
 
 ```
 
@@ -140,21 +103,22 @@ calibrate model for 2021 and set up param and process uncert
 
 ```{r}
 #### Water Q targets
-fcr_water_wide <- readr::read_csv(targets_url, show_col_types = FALSE) |> 
+fcr_water_wide <- read.csv("../Data/GeneratedData/all_water_targets_from_VERAbucket_21feb24.csv") |> 
   filter(site_id == "fcre",
          depth_m == 1.6,
          variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
+  mutate(datetime = as.Date(datetime)) |> 
   filter(datetime >= ymd("2021-01-01"),
          datetime <= ymd("2021-12-31")) |> 
   pivot_wider(names_from = variable, values_from = observation) |> 
-  select(datetime, Temp_C_mean, fDOM_QSU_mean)
+  select(datetime, Temp_C_mean, fDOM_QSU_mean) 
 
 #### Met targets 
-met_targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
 
-fcr_met_wide <- readr::read_csv(met_targets_url, show_col_types = FALSE)   |> 
+fcr_met_wide <- read.csv("../Data/GeneratedData/all_met_targets_from_VERAbucket_21feb24.csv")   |> 
   filter(site_id == "fcre",
          variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum") ) |> 
+    mutate(datetime = as.Date(datetime)) |> 
   filter(datetime >= ymd("2021-01-01"),
          datetime <= ymd("2021-12-31")) |> 
   pivot_wider(names_from = variable, values_from = observation) |> 
