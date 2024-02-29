@@ -289,7 +289,7 @@ fDOM function with full uncert
 #function to run an fdom forecast for one reference day 
 
 fdom_forecast_full_uncert <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
-                          fdom_IC_df, noaa_df, flare_df){
+                          fdom_IC_df, noaa_df, flare_df, output_folder){
   
     #establish forecasted dates
   forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
@@ -359,7 +359,7 @@ forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_memb
   } #end for loop
   
   
-return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/20feb24_1154am/forecast_full_unc_", forecast_start_date, '.csv'))
+return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/", output_folder, "/forecast_full_unc_", forecast_start_date, '.csv'))
 )
   
 }#end function
@@ -373,7 +373,8 @@ return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/20feb2
 # #run function, will genearte csv
 # fdom_forecast_full_uncert(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
 #               n_members = n_members, forecast_horizon = forecast_horizon,
-#                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily)
+#                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily,
+#                              output_folder = "20feb24" )
 # 
 # #look at plot
 # read.csv("./ASLO_forecast_output/forecast_full_unc_2023-01-02.csv") |> 
@@ -405,7 +406,8 @@ flare_df <- flare_csv_glm_daily
 for (j in 1:length(forecast_start_date)) {
   
   fdom_forecast_full_uncert(variable, forecast_start_date[j], 
-              n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df)
+              n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df,
+              output_folder = "a")
 
 
 }
