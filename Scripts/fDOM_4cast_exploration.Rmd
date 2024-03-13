@@ -206,7 +206,7 @@ fcr_fdom_doc %>%
   #filter(Year != 2020) %>% 
   # filter(Date > ymd("2018-10-01"),
    #       Date < ymd("2019-09-01")) %>%
-  ggplot(aes(x = fDOM_dailymean, y = DOC))+ # , color = Season
+  ggplot(aes(x = value, y = DOC))+ # , color = Season
   geom_point()+
   stat_poly_line() +  stat_poly_eq() +
   theme_bw()+
