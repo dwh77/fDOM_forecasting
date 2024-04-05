@@ -1,0 +1,644 @@
+---
+title: "fDOM 2023 hindcasts"
+author: "Dexter Howard"
+date: "2024-02-19"
+output: html_document
+---
+
+
+```{r, message = F}
+library(tidyverse)
+```
+
+## Set up data
+
+fdom targets data
+
+```{r}
+### Read directly from S3
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+#read in data
+fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+  filter(datetime >= ymd("2022-01-01"),
+         datetime < ymd("2024-04-01"),
+         site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean"))
+
+###Read from local saved copy while S3 is down
+# fcr_fdom_2023 <- read.csv("../Data/GeneratedData/all_water_targets_from_VERAbucket_21feb24.csv") |> 
+#   filter(datetime >= ymd("2023-01-01"),
+#          datetime < ymd("2024-01-01"),
+#          site_id == "fcre",
+#          depth_m == 1.6,
+#          variable %in% c("fDOM_QSU_mean"))
+  
+
+#head(fcr_fdom_2023)
+
+```
+
+local met 
+
+```{r}
+met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
+
+met_targets <- readr::read_csv(met_url, show_col_types = FALSE)
+
+
+```
+
+
+load and format NOAA forecasts
+
+```{r}
+###prior when using hourly csv the average to daily 
+#read in csv generated in S3bucket_data.Rmd
+# noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv") #first trial 
+
+#head(noaa_csv)
+
+# #making data frame of daily averaged forecasts from prior csv
+# daily_noaa <- noaa_csv |> 
+#   mutate(datetime_date = as.Date(datetime)) |> 
+#   group_by(reference_datetime, datetime_date, variable, parameter) |> 
+#   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
+#    filter(parameter <= 30) 
+
+### working of already daily averaged csv
+# daily_noaa <- read_csv("../Data/GeneratedData/NOAA_stage2data_allyears_averagedTOdaily_SW_precip_fromVERAs3bucket.csv") |> 
+#   filter(reference_datetime >= ymd("2023-01-01"),
+#          reference_datetime <= ymd("2024-01-01"),
+#          parameter <= 30)
+
+###### HOW I GOT csv above 
+noaa_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12stage2/parquet?endpoint_override=renc.osn.xsede.org")|>
+  dplyr::filter(#datetime >= ymd_hms("2021-01-01 00:00:00"), datetime <= ymd_hms("2021-12-31 23:00:00"),
+       # datetime >= ymd_hms("2023-01-01 00:00:00"),
+       # datetime <= ymd_hms("2024-01-01 00:00:00"),
+       site_id == 'fcre',
+       variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |> 
+  mutate(datetime_date = as.Date(datetime)) |> 
+  group_by(reference_datetime, datetime_date, variable, parameter) |> 
+  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") 
+
+df_noaa <- noaa_all_results |> dplyr::collect()
+
+###write csv used in hindcasting script
+##write.csv(df_noaa, "./GeneratedData/NOAA_stage2data_allyears_averagedTOdaily_SW_precip_fromVERAs3bucket.csv", row.names = F)
+
+# has parquet, doesn't work
+# all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2/parquet?endpoint_override=renc.osn.xsede.org")
+# df <- all_results |> dplyr::collect()
+
+#only back to feb 2024
+all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
+  filter(#datetime >= ymd_hms("2024-01-01 00:00:00"), datetime <= ymd_hms("2024-01-31 23:00:00"),
+         site_id == 'fcre',
+         parameter == 1,
+         variable %in% c("surface_downwelling_shortwave_flux_in_air")) #precipitation_flux
+df <- all_results |> dplyr::collect()
+
+
+
+```
+
+load and format FLARE water temp forecasts 
+
+```{r}
+### old 
+# #read in csv generated in S3bucket_data.Rmd
+# flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
+# 
+# head(flare_csv)
+# 
+# summary(flare_csv)
+# 
+# #clean up flare forecasts to match format on noaa; filter to just 31 ensembles and just FLARE forecasts
+# flare_csv_glm_daily <- flare_csv |> 
+#   filter(model_id == "test_runS3",   # to remove GOTM and Simstrat 
+#          parameter <= 30) |>  # to match parameter number of NOAA
+#   mutate(reference_datetime = as.Date(reference_datetime)) |> 
+#   select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables 
+#   rename(datetime_date = datetime) #match naming
+
+###new read in for when S3 buckt is down
+# 
+# flare_csv_glm_daily <- read_csv("../Data/GeneratedData/FLARE_forecasts_FCR_allyears_waterTemp_1_5m_fromFlareS3bucket.csv") |> 
+#   filter(model_id == "test_runS3",   # to remove GOTM and Simstrat
+#          parameter <= 30) |>  # to match parameter number of NOAA
+#   mutate(reference_datetime = as.Date(reference_datetime)) |>
+#   select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables
+#   rename(datetime_date = datetime) |>  #match naming
+#     filter(reference_datetime >= ymd("2023-01-01"),
+#          reference_datetime <= ymd("2024-01-01"))
+
+
+
+##### water temp forecasts w/ reference datetime from 2023-10-14 to present 
+flare_full_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean/model_id=glm_aed_v1?endpoint_override=renc.osn.xsede.org")
+
+df_flare_full <- flare_full_all_results |>
+ dplyr::filter(#variable %in% c("Temp_C_mean"),
+               #datetime >= ymd_hms("2023-12-31 00:00:00"),
+               site_id == "fcre",
+               depth_m == 1.6) |>
+ dplyr::collect()
+
+
+###This gets water temp forecasts w/ reference datetimes from 2022-10-02 to 2024-02-18
+backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=fcre/"),
+                                  endpoint_override = 'renc.osn.xsede.org',
+                                  anonymous = TRUE)
+
+df_old <- arrow::open_dataset(backup_forecasts) |>
+  filter(#datetime > ymd_hms("2023-01-01 00:00:00"), 
+         #datetime < ymd_hms("2023-01-31 00:00:00"),
+         depth %in% c(1.5), #no 1.6
+         variable == "temperature",
+         parameter <= 2
+         ) |>  ## call dplyr functions here to reduce data size
+  dplyr::collect()
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## get model paramters 
+calibrate model for 2021 and set up param and process uncert
+
+```{r}
+#### Water Q targets
+fcr_water_wide <- read.csv("../Data/GeneratedData/all_water_targets_from_VERAbucket_21feb24.csv") |> 
+  filter(site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
+  mutate(datetime = as.Date(datetime)) |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31")) |> 
+  pivot_wider(names_from = variable, values_from = observation) |> 
+  select(datetime, Temp_C_mean, fDOM_QSU_mean) 
+
+#### Met targets 
+
+fcr_met_wide <- read.csv("../Data/GeneratedData/all_met_targets_from_VERAbucket_21feb24.csv")   |> 
+  filter(site_id == "fcre",
+         variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum") ) |> 
+    mutate(datetime = as.Date(datetime)) |> 
+  filter(datetime >= ymd("2021-01-01"),
+         datetime <= ymd("2021-12-31")) |> 
+  pivot_wider(names_from = variable, values_from = observation) |> 
+  select(datetime, ShortwaveRadiationUp_Wm2_mean, Rain_mm_sum)
+
+#### Join data
+joined_fcr <- left_join(fcr_water_wide, fcr_met_wide, by = "datetime") |> 
+  mutate(fdom_lag1 = lag(fDOM_QSU_mean),
+         rain_lag1 = lag(Rain_mm_sum))
+
+#### calibrate model and get model summary, parameter values and parameter SE
+joined_fcr_noNA <- na.omit(joined_fcr)
+
+fdom_model <- lm(fDOM_QSU_mean ~ fdom_lag1 + Temp_C_mean + 
+               ShortwaveRadiationUp_Wm2_mean + Rain_mm_sum + rain_lag1,
+                  data = joined_fcr_noNA)
+
+fdom_model_summary <- summary(fdom_model)
+
+coeffs <- round(fdom_model_summary$coefficients[,1], 2)
+params_se <- fdom_model_summary$coefficients[,2]
+
+
+#### get param uncertainty
+#get param distribtuions for parameter uncertainity 
+param_df <- data.frame(beta1 = rnorm(30, coeffs[1], params_se[1]),
+                       beta2 = rnorm(30, coeffs[2], params_se[2]),
+                       beta3 = rnorm(30, coeffs[3], params_se[3]),
+                       beta4 = rnorm(30, coeffs[4], params_se[4]),
+                       beta5 = rnorm(30, coeffs[5], params_se[5]),
+                       beta6 = rnorm(30, coeffs[6], params_se[6])
+                       )
+#plot params
+param_df |> mutate(colnum = 1) |> select(colnum, everything()) |>  pivot_longer(-1) |> 
+  ggplot()+
+  geom_density(aes(value))+
+  facet_wrap(~name, scales = "free")
+
+
+####get process uncertainty
+#find residuals
+mod <- predict(fdom_model, data = joined_fcr_noNA)
+residuals <- mod - joined_fcr_noNA$fDOM_QSU_mean
+sigma <- sd(residuals, na.rm = TRUE) # Process Uncertainty Noise Std Dev.; this is your sigma
+
+
+####look at set up for IC uncert 
+ic_sd <- 0.1 #adpating from HLWs temp 4cast using 0.1 and detection limit on fDOM sensor being 0.07 QSU
+ic_uc <- rnorm(n = 30, mean = mean(fcr_fdom_2023$observation, na.rm = T), sd = ic_sd)
+hist(ic_uc)
+
+
+```
+
+
+## Functions
+
+helper functions 
+```{r}
+##function to pull current value 
+current_value <- function(dataframe, variable, start_date){
+  
+  value <- dataframe |> 
+  mutate(datetime = as.Date(datetime)) |> 
+  filter(datetime == start_date,
+         variable == variable) |> 
+  pull(observation)
+  
+  return(value)
+}
+
+#function to generate 30 ensembles of fDOM IC based on standard deviation arround current observation
+get_IC_uncert <- function(curr_fdom, n_members, ic_sd = 0.1){
+  rnorm(n = n_members, mean = curr_fdom, sd = ic_sd)
+}
+
+```
+
+fDOM function with just driver uncert
+
+```{r}
+#function to run an fdom forecast for one reference day 
+
+fdom_forecast_driver_uncert <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
+                          fdom_IC_df, noaa_df, flare_df){
+  
+    #establish forecasted dates
+  forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
+
+  #get current fdom value
+  curr_fdom <- current_value(fdom_IC_df, variable, forecast_start_date)
+
+  #set up table to hold forecast output 
+  forecast_driver_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
+                              ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
+                              reference_datetime = forecast_start_date,
+                              Horizon = reference_datetime - forecast_date,
+                              forecast_variable = "fdom",
+                              value = as.double(NA),
+                              uc_type = "driver") %>%
+  mutate(value = ifelse(forecast_date == forecast_start_date, curr_fdom, NA)) 
+  
+  
+  #for loop to run forecast 
+  for(i in 2:length(forecasted_dates)) {
+  
+  #pull prediction dataframe for the relevant date
+  fdom_pred <- forecast_driver_unc %>%
+    filter(forecast_date == forecasted_dates[i])
+  
+  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
+  met_sw_driv <- daily_noaa %>%
+    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  met_precip_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+    met_precip_lag_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i-1])
+    
+  flare_driv <- flare_csv_glm_daily %>%
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  #pull lagged fdom values
+  fdom_lag <- forecast_driver_unc %>%
+    filter(forecast_date == forecasted_dates[i-1])
+  
+  #run model
+  fdom_pred$value <- coeffs[1] + (fdom_lag$value * coeffs[2]) + (flare_driv$prediction * coeffs[3]) +
+     (met_sw_driv$prediction * coeffs[4]) + (met_precip_driv$prediction * coeffs[5]) + 
+     (met_precip_lag_driv$prediction * coeffs[6])
+  
+  #insert values back into the forecast dataframe
+  forecast_driver_unc <- forecast_driver_unc %>%
+    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
+  
+  } #end for loop
+  
+  
+return(write.csv(forecast_driver_unc, file = paste0("./ASLO_forecast_output/forecast_driver_unc_", forecast_start_date, '.csv'))
+)
+  
+}#end function
+
+#### test function 
+
+# ##set up forecast
+#  forecast_start_date <- ymd("2023-01-02")
+# n_members <- 30
+# forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+# #run function, will get csv output
+# fdom_forecast(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
+#               n_members = n_members, forecast_horizon = forecast_horizon,
+#                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily)
+
+```
+
+fDOM function with full uncert
+
+```{r}
+#function to run an fdom forecast for one reference day 
+
+fdom_forecast_full_uncert <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
+                          fdom_IC_df, noaa_df, flare_df, output_folder){
+  
+    #establish forecasted dates
+  forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
+
+  #get current fdom value
+  curr_fdom <- current_value(fdom_IC_df, variable, forecast_start_date)
+  
+  #set up df of different initial conditions for IC uncert
+  ic_df <- tibble(forecast_date = rep(as.Date(forecast_start_date), times = n_members),
+                ensemble_member = c(1:n_members),
+                forecast_variable = "fdom",
+                value = get_IC_uncert(curr_fdom, n_members, ic_sd = 0.1),
+                uc_type = "total")
+
+  #set up table to hold forecast output 
+forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
+                              ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
+                              reference_datetime = forecast_start_date,
+                              Horizon = reference_datetime - forecast_date,
+                              forecast_variable = "fdom",
+                              value = as.double(NA),
+                              uc_type = "total") |> 
+  rows_update(ic_df, by = c("forecast_date","ensemble_member","forecast_variable", "uc_type")) # adding IC uncert
+  
+  
+  #for loop to run forecast 
+  for(i in 2:length(forecasted_dates)) {
+  
+  #pull prediction dataframe for the relevant date
+  fdom_pred <- forecast_full_unc %>%
+    filter(forecast_date == forecasted_dates[i])
+  
+  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
+  met_sw_driv <- daily_noaa %>%
+    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  met_precip_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+    met_precip_lag_driv <- daily_noaa %>%
+    filter(variable == "precipitation_flux") |> 
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i-1])
+    
+  flare_driv <- flare_csv_glm_daily %>%
+    filter(reference_datetime == forecast_start_date) |> 
+    filter(datetime_date == forecasted_dates[i])
+  
+  #pull lagged fdom values
+  fdom_lag <- forecast_full_unc %>%
+    filter(forecast_date == forecasted_dates[i-1])
+  
+  #run model
+  fdom_pred$value <- param_df$beta1 + (fdom_lag$value * param_df$beta2) + (flare_driv$prediction * param_df$beta3) +
+     (met_sw_driv$prediction * param_df$beta4) + (met_precip_driv$prediction * param_df$beta5) + 
+     (met_precip_lag_driv$prediction * param_df$beta6) +
+     rnorm(n = 30, mean = 0, sd = sigma) #process uncert
+  
+  #insert values back into the forecast dataframe
+  forecast_full_unc <- forecast_full_unc %>%
+    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
+  
+  } #end for loop
+  
+  
+return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/", output_folder, "/forecast_full_unc_", forecast_start_date, '.csv'))
+)
+  
+}#end function
+
+#### test function 
+
+# ##set up forecast
+#  forecast_start_date <- ymd("2023-01-02")
+# n_members <- 30
+# forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+# #run function, will genearte csv
+# fdom_forecast_full_uncert(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
+#               n_members = n_members, forecast_horizon = forecast_horizon,
+#                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily,
+#                              output_folder = "20feb24" )
+# 
+# #look at plot
+# read.csv("./ASLO_forecast_output/forecast_full_unc_2023-01-02.csv") |> 
+#   mutate(forecast_date = as.Date(forecast_date)) |> 
+#     # filter(forecast_date > ymd("2023-01-03")) |>
+#   ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
+#   geom_line()
+
+
+```
+
+
+## run forecasts 
+
+running for loop over fdom_forecast function
+```{r}
+## set up dates for for loop
+forecast_start_date <- seq(ymd("2023-02-20"), ymd("2023-12-31"), by = "day")
+
+##set up inputs to function
+variable <- "fDOM_QSU_mean"
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
+fdom_IC_df <- fcr_fdom_2023
+noaa_df <- daily_noaa
+flare_df <- flare_csv_glm_daily
+
+
+for (j in 1:length(forecast_start_date)) {
+  
+  fdom_forecast_full_uncert(variable, forecast_start_date[j], 
+              n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df,
+              output_folder = "a")
+
+
+}
+
+#loop broke on 19 Feb and at 16 Dec onwards. 16 Dec is missing input after trimming to 2023 I think. 
+#Need to look into issue on 19Feb
+
+```
+
+
+## anlayze forecast outputs 
+
+read in forecast outputs
+```{r}
+#bind forecast outputs into one data frame 
+output_all <- list.files(path = "./ASLO_forecast_output/20feb24_1154am", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows() |> 
+  select(-1) #remove row number, need to remove this function
+
+head(output_all)
+
+```
+
+make pdf plot of all forecasts generated 
+```{r}
+#facet for all forecasts
+pdf("./ASLO_forecast_output/all_forecasts.pdf", height = 250)
+
+output_all |> 
+  mutate(Horizon = Horizon*-1) |> 
+  # filter(reference_datetime == ymd("2023-01-05")) |> 
+  ggplot(aes(x = Horizon, y = value, color = as.character(ensemble_member)))+
+  geom_line()+
+  facet_wrap(~reference_datetime, ncol = 4)+
+  guides(color = "none")+
+  theme_bw()
+
+dev.off()
+
+```
+
+look at rmse or stats or something
+
+```{r}
+#bind in observed fdom 
+head(fcr_fdom_2023)
+fcr_fdom_2023_forjoin <- fcr_fdom_2023 |> 
+  mutate(datetime = as.Date(datetime)) |> 
+  select(datetime, observation) |> rename(fdom_observed = observation)
+
+head(output_all)
+
+output_stats <- left_join(output_all, fcr_fdom_2023_forjoin, by = c("forecast_date" = "datetime")) |> 
+  mutate(resid = fdom_observed - value,
+         Horizon = Horizon*-1) |> 
+  filter(Horizon > 0) |> 
+  mutate(Julian = yday(forecast_date),
+         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+         )
+
+#rmse
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) 
+
+# rmse <- 
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
+  ggplot(aes(x = Horizon, y = rmse, color = Season))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  ggtitle("RMSE by season")+
+  theme_bw() + theme(legend.position = "top")
+
+#sd <- 
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(sd = sd(value, na.rm = T)) |> 
+  ggplot(aes(x = Horizon, y = sd, color = Season ))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  ggtitle("SD by season")+
+  theme_bw() + theme(legend.position = "top")
+
+#resid mean over horizon
+output_stats |> 
+  group_by(Horizon, Season) |> 
+  mutate(resid = mean(resid, na.rm = T) ) |> 
+  ggplot(aes(x = Horizon, y = resid, color = Season))+
+  geom_line(linewidth = 1.2)+
+  geom_point()+
+  ggtitle("residual by season")+
+  theme_bw()
+
+
+# #boxplot trial
+# output_stats |> 
+#   ggplot()+
+#   geom_boxplot(aes(x = as.factor(Horizon), y = resid))+
+#   # geom_jitter()+
+#   ggtitle("residual by season")+
+#   theme_bw()
+
+library(patchwork)
+
+# rmse | sd
+
+```
+
+
+
+
+
+
+
+
+
+
