@@ -102,6 +102,27 @@ df <- all_results |> dplyr::collect()
 
 
 
+old_met_bucket <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/drivers/noaa/gefs-v12-reprocess/stage2/parquet/0/"),
+                                         endpoint_override = 'renc.osn.xsede.org',
+                                         anonymous = TRUE)
+
+dfold <- arrow::open_dataset(old_met_bucket) |>
+  filter(#datetime > ymd_hms("2023-01-01 00:00:00"), 
+         reference_datetime >= ymd("2022-10-01"),
+         reference_datetime <= ymd("2024-04-01"),
+         site_id == "fcre",
+         variable %in% c("surface_downwelling_shortwave_flux_in_air"),
+         parameter < 2
+         ) |>  ## call dplyr functions here to reduce data size
+  dplyr::collect()
+
+
+#will show what the columns are
+arrow::open_dataset(old_met_bucket) #you don't have to collect and it'll show what you're left with 
+
+#how to check what the next level in the repo is
+old_met_bucket$ls() #change link above when you identify what level you want
+
 ```
 
 load and format FLARE water temp forecasts 
