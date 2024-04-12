@@ -26,15 +26,6 @@ fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
          depth_m == 1.6,
          variable %in% c("fDOM_QSU_mean"))
 
-###Read from local saved copy while S3 is down
-# fcr_fdom_2023 <- read.csv("../Data/GeneratedData/all_water_targets_from_VERAbucket_21feb24.csv") |> 
-#   filter(datetime >= ymd("2023-01-01"),
-#          datetime < ymd("2024-01-01"),
-#          site_id == "fcre",
-#          depth_m == 1.6,
-#          variable %in% c("fDOM_QSU_mean"))
-  
-
 #head(fcr_fdom_2023)
 
 ```
@@ -45,7 +36,6 @@ local met
 met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
 
 met_targets <- readr::read_csv(met_url, show_col_types = FALSE)
-
 
 ```
 
@@ -72,33 +62,16 @@ load and format NOAA forecasts
 #          reference_datetime <= ymd("2024-01-01"),
 #          parameter <= 30)
 
-###### HOW I GOT csv above 
-# noaa_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12stage2/parquet?endpoint_override=renc.osn.xsede.org")|>
-#   dplyr::filter(#datetime >= ymd_hms("2021-01-01 00:00:00"), datetime <= ymd_hms("2021-12-31 23:00:00"),
-#        # datetime >= ymd_hms("2023-01-01 00:00:00"),
-#        # datetime <= ymd_hms("2024-01-01 00:00:00"),
-#        site_id == 'fcre',
-#        variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |> 
-#   mutate(datetime_date = as.Date(datetime)) |> 
-#   group_by(reference_datetime, datetime_date, variable, parameter) |> 
-#   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") 
-# 
-# df_noaa <- noaa_all_results |> dplyr::collect()
 
-###write csv used in hindcasting script
-##write.csv(df_noaa, "./GeneratedData/NOAA_stage2data_allyears_averagedTOdaily_SW_precip_fromVERAs3bucket.csv", row.names = F)
 
-# has parquet, doesn't work
-# all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2/parquet?endpoint_override=renc.osn.xsede.org")
-# df <- all_results |> dplyr::collect()
-
-#only back to feb 2024
-all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
-  filter(#datetime >= ymd_hms("2024-01-01 00:00:00"), datetime <= ymd_hms("2024-01-31 23:00:00"),
+#New bucket: NOAA stage 2 forecasts from feb 2024 - present 
+noaa_present <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
+  filter(
+         #datetime >= ymd_hms("2024-01-01 00:00:00"), datetime <= ymd_hms("2024-01-31 23:00:00"),
          site_id == 'fcre',
          parameter == 1,
          variable %in% c("surface_downwelling_shortwave_flux_in_air")) #precipitation_flux
-df <- all_results |> dplyr::collect()
+df_noaa_present <- all_results |> dplyr::collect()
 
 
 #### Getting NOAA forecasts from 2020-09-25 to 2024-02-18
@@ -106,15 +79,6 @@ old_met_bucket <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/drive
                                          endpoint_override = 'renc.osn.xsede.org',
                                          anonymous = TRUE)
 
-dfold <- arrow::open_dataset(old_met_bucket) |>
-  filter(site_id == "fcre",
-         variable %in% c("surface_downwelling_shortwave_flux_in_air"),
-         # parameter <= 2
-         ) |>  ## call dplyr functions here to reduce data size
-  dplyr::collect()
-
-head(dfold)
-#average to daily forecasts
 noaa_old_daily <- arrow::open_dataset(old_met_bucket) |>
   dplyr::filter(
        site_id == 'fcre',
@@ -124,17 +88,7 @@ noaa_old_daily <- arrow::open_dataset(old_met_bucket) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
   dplyr::collect()
 
-write.csv(noaa_old_daily, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv", row.names = F)
-
-# test <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vt_backup/drivers/noaa/gefs-v12-reprocess/stage2?endpoint_override=renc.osn.xsede.org") 
-# 
-# # |> 
-# #   filter(#datetime >= ymd_hms("2024-01-01 00:00:00"), datetime <= ymd_hms("2024-01-31 23:00:00"),
-# #          site_id == 'fcre',
-# #          parameter == 1,
-# #          variable %in% c("surface_downwelling_shortwave_flux_in_air"))  #precipitation_flux
-# df_test <- test |> dplyr::collect()
-
+# write.csv(noaa_old_daily, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv", row.names = F)
 
 
 #will show what the columns are
