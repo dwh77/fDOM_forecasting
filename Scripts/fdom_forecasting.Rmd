@@ -28,6 +28,13 @@ fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
 
 #head(fcr_fdom_2023)
 
+bvr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+  filter(datetime >= ymd("2022-01-01"),
+         datetime < ymd("2024-04-01"),
+         site_id == "bvre",
+         depth_m == 1.5,
+         variable %in% c("fDOM_QSU_mean"))
+
 ```
 
 local met 
@@ -43,35 +50,18 @@ met_targets <- readr::read_csv(met_url, show_col_types = FALSE)
 load and format NOAA forecasts
 
 ```{r}
-###prior when using hourly csv the average to daily 
-#read in csv generated in S3bucket_data.Rmd
-# noaa_csv <- read_csv("./GeneratedData/NOAA_stage2data_2023_fromVERAs3bucket.csv") #first trial 
-
-#head(noaa_csv)
-
-# #making data frame of daily averaged forecasts from prior csv
-# daily_noaa <- noaa_csv |> 
-#   mutate(datetime_date = as.Date(datetime)) |> 
-#   group_by(reference_datetime, datetime_date, variable, parameter) |> 
-#   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
-#    filter(parameter <= 30) 
-
-### working of already daily averaged csv
-# daily_noaa <- read_csv("../Data/GeneratedData/NOAA_stage2data_allyears_averagedTOdaily_SW_precip_fromVERAs3bucket.csv") |> 
-#   filter(reference_datetime >= ymd("2023-01-01"),
-#          reference_datetime <= ymd("2024-01-01"),
-#          parameter <= 30)
-
-
-
 #New bucket: NOAA stage 2 forecasts from feb 2024 - present 
-noaa_present <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
+noaa_present_daily <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
   filter(
          #datetime >= ymd_hms("2024-01-01 00:00:00"), datetime <= ymd_hms("2024-01-31 23:00:00"),
          site_id == 'fcre',
-         parameter == 1,
-         variable %in% c("surface_downwelling_shortwave_flux_in_air")) #precipitation_flux
-df_noaa_present <- all_results |> dplyr::collect()
+         #parameter == 1,
+         variable %in% c("surface_downwelling_shortwave_flux_in_air", "precipitation_flux")) |> 
+  mutate(datetime_date = as.Date(datetime)) |>
+  group_by(reference_datetime, datetime_date, variable, parameter) |>
+  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop")
+
+df_noaa_present_daily <- noaa_present_daily |> dplyr::collect()
 
 
 #### Getting NOAA forecasts from 2020-09-25 to 2024-02-18
@@ -81,16 +71,18 @@ old_met_bucket <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/drive
 
 noaa_old_daily <- arrow::open_dataset(old_met_bucket) |>
   dplyr::filter(
-       site_id == 'fcre',
+       site_id == 'fcre',  #filtering by bvre returns the same forecasts 
        variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |>
   mutate(datetime_date = as.Date(datetime)) |>
   group_by(reference_datetime, datetime_date, variable, parameter) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
   dplyr::collect()
 
-# write.csv(noaa_old_daily, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv", row.names = F)
+#write.csv(noaa_old_daily, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv", row.names = F)
 
 
+
+#### working with bucket paths info
 #will show what the columns are
 arrow::open_dataset(old_met_bucket) #you don't have to collect and it'll show what you're left with 
 
@@ -102,66 +94,62 @@ old_met_bucket$ls() #change link above when you identify what level you want
 load and format FLARE water temp forecasts 
 
 ```{r}
-### old 
-# #read in csv generated in S3bucket_data.Rmd
-# flare_csv <- read_csv("./GeneratedData/FLARE_forecasts_2023_waterTemp_1_5m_fromFLAREs3bucket.csv")
-# 
-# head(flare_csv)
-# 
-# summary(flare_csv)
-# 
-# #clean up flare forecasts to match format on noaa; filter to just 31 ensembles and just FLARE forecasts
-# flare_csv_glm_daily <- flare_csv |> 
-#   filter(model_id == "test_runS3",   # to remove GOTM and Simstrat 
-#          parameter <= 30) |>  # to match parameter number of NOAA
-#   mutate(reference_datetime = as.Date(reference_datetime)) |> 
-#   select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables 
-#   rename(datetime_date = datetime) #match naming
-
-###new read in for when S3 buckt is down
-# 
-# flare_csv_glm_daily <- read_csv("../Data/GeneratedData/FLARE_forecasts_FCR_allyears_waterTemp_1_5m_fromFlareS3bucket.csv") |> 
-#   filter(model_id == "test_runS3",   # to remove GOTM and Simstrat
-#          parameter <= 30) |>  # to match parameter number of NOAA
-#   mutate(reference_datetime = as.Date(reference_datetime)) |>
-#   select(reference_datetime, datetime, variable, parameter, prediction) |> #match variables
-#   rename(datetime_date = datetime) |>  #match naming
-#     filter(reference_datetime >= ymd("2023-01-01"),
-#          reference_datetime <= ymd("2024-01-01"))
-
-
-
 ##### water temp forecasts w/ reference datetime from 2023-10-14 to present 
 flare_full_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean/model_id=glm_aed_v1?endpoint_override=renc.osn.xsede.org")
 
-df_flare_full <- flare_full_all_results |>
- dplyr::filter(#variable %in% c("Temp_C_mean"),
-               #datetime >= ymd_hms("2023-12-31 00:00:00"),
-               site_id == "fcre",
+flare_full_all_results_z <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org")
+
+df_flare_full <- flare_full_all_results_z |>
+  filter(site_id == "bvre") |> 
+ dplyr::collect()
+
+
+df_flare_fcr <- flare_full_all_results |>
+ dplyr::filter(site_id == "fcre",
                depth_m == 1.6) |>
+ dplyr::collect()
+
+df_flare_bvr <- flare_full_all_results |>
+ dplyr::filter(site_id == "bvre",
+               depth_m == 1.5) |>
  dplyr::collect()
 
 
 ###This gets water temp forecasts w/ reference datetimes from 2022-10-02 to 2024-02-18
-backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=fcre/"),
+fcr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=fcre/"),
                                   endpoint_override = 'renc.osn.xsede.org',
                                   anonymous = TRUE)
 
-df_old <- arrow::open_dataset(backup_forecasts) |>
-  filter(#datetime > ymd_hms("2023-01-01 00:00:00"), 
-         #datetime < ymd_hms("2023-01-31 00:00:00"),
-         depth %in% c(1.5), #no 1.6
+fcr_df_flare_old <- arrow::open_dataset(fcr_backup_forecasts) |>
+  filter(depth %in% c(1.5), #no 1.6
          variable == "temperature",
-         parameter <= 2
-         ) |>  ## call dplyr functions here to reduce data size
+         parameter <= 31,
+         model_id == "test_runS3" #other models for FCR, this is the only one for BVR in backups bucket
+         ) |> 
   dplyr::collect()
 
+bvr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=bvre/"),
+                                  endpoint_override = 'renc.osn.xsede.org',
+                                  anonymous = TRUE)
 
+bvr_df_flare_old <- arrow::open_dataset(bvr_backup_forecasts) |>
+  filter(depth %in% c(1.5), 
+         variable == "temperature",
+         parameter <= 31
+         ) |>  
+  dplyr::collect()
+
+arrow::open_dataset(backup_forecasts)
 
 ```
 
 
 
+## look at model for FCR and BVR
+
+```{r}
+
+```
 
 
 
