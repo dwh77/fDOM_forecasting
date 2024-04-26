@@ -12,37 +12,35 @@ library(tidyverse)
 
 ## Set up data
 
-fdom targets data
+get local targets data 
 
 ```{r}
-### Read directly from S3
+### S3 links 
 targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
 
-#read in data
-fcr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
+
+### met data 
+met_targets <- readr::read_csv(met_url, show_col_types = FALSE) |> 
+  filter(datetime >= ymd("2022-01-01"),
+         datetime < ymd("2024-04-01"),
+         variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum"))
+
+# water Q data
+fcr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
   filter(datetime >= ymd("2022-01-01"),
          datetime < ymd("2024-04-01"),
          site_id == "fcre",
          depth_m == 1.6,
-         variable %in% c("fDOM_QSU_mean"))
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean"))
 
-#head(fcr_fdom_2023)
 
-bvr_fdom_2023 <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+bvr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
   filter(datetime >= ymd("2022-01-01"),
          datetime < ymd("2024-04-01"),
          site_id == "bvre",
          depth_m == 1.5,
-         variable %in% c("fDOM_QSU_mean"))
-
-```
-
-local met 
-
-```{r}
-met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
-
-met_targets <- readr::read_csv(met_url, show_col_types = FALSE)
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean"))
 
 ```
 
@@ -50,98 +48,85 @@ met_targets <- readr::read_csv(met_url, show_col_types = FALSE)
 load and format NOAA forecasts
 
 ```{r}
-#New bucket: NOAA stage 2 forecasts from feb 2024 - present 
-noaa_present_daily <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
-  filter(
-         #datetime >= ymd_hms("2024-01-01 00:00:00"), datetime <= ymd_hms("2024-01-31 23:00:00"),
-         site_id == 'fcre',
-         #parameter == 1,
-         variable %in% c("surface_downwelling_shortwave_flux_in_air", "precipitation_flux")) |> 
-  mutate(datetime_date = as.Date(datetime)) |>
-  group_by(reference_datetime, datetime_date, variable, parameter) |>
-  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop")
-
-df_noaa_present_daily <- noaa_present_daily |> dplyr::collect()
-
-
 #### Getting NOAA forecasts from 2020-09-25 to 2024-02-18
-old_met_bucket <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/drivers/noaa/gefs-v12-reprocess/stage2/"),
-                                         endpoint_override = 'renc.osn.xsede.org',
-                                         anonymous = TRUE)
-
-noaa_old_daily <- arrow::open_dataset(old_met_bucket) |>
-  dplyr::filter(
-       site_id == 'fcre',  #filtering by bvre returns the same forecasts 
-       variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |>
-  mutate(datetime_date = as.Date(datetime)) |>
-  group_by(reference_datetime, datetime_date, variable, parameter) |>
-  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
-  dplyr::collect()
+# old_met_bucket <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/drivers/noaa/gefs-v12-reprocess/stage2/"),
+#                                          endpoint_override = 'renc.osn.xsede.org',
+#                                          anonymous = TRUE)
+# 
+# noaa_old_daily <- arrow::open_dataset(old_met_bucket) |>
+#   dplyr::filter(
+#        site_id == 'fcre',  #filtering by bvre returns the same forecasts 
+#        variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |>
+#   mutate(datetime_date = as.Date(datetime)) |>
+#   group_by(reference_datetime, datetime_date, variable, parameter) |>
+#   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |> 
+#   dplyr::collect()
 
 #write.csv(noaa_old_daily, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv", row.names = F)
 
-
-
-#### working with bucket paths info
-#will show what the columns are
-arrow::open_dataset(old_met_bucket) #you don't have to collect and it'll show what you're left with 
-
-#how to check what the next level in the repo is
-old_met_bucket$ls() #change link above when you identify what level you want
+noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv")
+noaa_daily <- noaa_daily |> 
+  filter(parameter <= 30)
 
 ```
 
 load and format FLARE water temp forecasts 
 
 ```{r}
-##### water temp forecasts w/ reference datetime from 2023-10-14 to present 
-flare_full_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean/model_id=glm_aed_v1?endpoint_override=renc.osn.xsede.org")
-
-flare_full_all_results_z <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org")
-
-df_flare_full <- flare_full_all_results_z |>
-  filter(site_id == "bvre") |> 
- dplyr::collect()
-
-
-df_flare_fcr <- flare_full_all_results |>
- dplyr::filter(site_id == "fcre",
-               depth_m == 1.6) |>
- dplyr::collect()
-
-df_flare_bvr <- flare_full_all_results |>
- dplyr::filter(site_id == "bvre",
-               depth_m == 1.5) |>
- dplyr::collect()
-
-
 ###This gets water temp forecasts w/ reference datetimes from 2022-10-02 to 2024-02-18
-fcr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=fcre/"),
-                                  endpoint_override = 'renc.osn.xsede.org',
-                                  anonymous = TRUE)
 
-fcr_df_flare_old <- arrow::open_dataset(fcr_backup_forecasts) |>
-  filter(depth %in% c(1.5), #no 1.6
-         variable == "temperature",
-         parameter <= 31,
-         model_id == "test_runS3" #other models for FCR, this is the only one for BVR in backups bucket
-         ) |> 
-  dplyr::collect()
+##FCR
+# fcr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=fcre/"),
+#                                   endpoint_override = 'renc.osn.xsede.org',
+#                                   anonymous = TRUE)
+# 
+# fcr_df_flare_old <- arrow::open_dataset(fcr_backup_forecasts) |>
+#   filter(depth %in% c(1.5), #no 1.6
+#          variable == "temperature",
+#          parameter <= 31,
+#          model_id == "test_runS3" #other models for FCR, this is the only one for BVR in backups bucket
+#          ) |> 
+#   dplyr::collect()
+# 
+# write.csv(fcr_df_flare_old, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_FLARE_7nov22-18feb24.csv", row.names = F)
 
-bvr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=bvre/"),
-                                  endpoint_override = 'renc.osn.xsede.org',
-                                  anonymous = TRUE)
+fcr_flare <- read.csv("../Data/GeneratedData/FCR_FLARE_7nov22-18feb24.csv")
 
-bvr_df_flare_old <- arrow::open_dataset(bvr_backup_forecasts) |>
-  filter(depth %in% c(1.5), 
-         variable == "temperature",
-         parameter <= 31
-         ) |>  
-  dplyr::collect()
+fcr_flare <- fcr_flare |> 
+  rename(datetime_date = datetime) |> 
+  filter(parameter <= 30)
 
-arrow::open_dataset(backup_forecasts)
+
+## BVR 
+# bvr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=bvre/"),
+#                                   endpoint_override = 'renc.osn.xsede.org',
+#                                   anonymous = TRUE)
+# 
+# bvr_df_flare_old <- arrow::open_dataset(bvr_backup_forecasts) |>
+#   filter(depth %in% c(1.5), 
+#          variable == "temperature",
+#          parameter <= 31
+#          ) |>  
+#   dplyr::collect()
+# 
+#
+# write.csv(bvr_df_flare_old, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/BVR_FLARE_7nov22-18feb24.csv", row.names = F)
+
+bvr_flare <- read.csv("../Data/GeneratedData/BVR_FLARE_7nov22-18feb24.csv")
+
 
 ```
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -264,299 +249,29 @@ return(param_df)
 ```
 
 
-function to run forecast
-
-```{r}
-
-yesterday_hms <- ymd_hms(paste( (Sys.Date()-1), "00:00:00" ))
-yesterday <- ymd(Sys.Date()-1)
-
-
-##water Q target
-targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
-
-### met target
-met_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-met-targets.csv.gz"
-
-#### NOAA
-noaa_present_daily <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/flare/drivers/met/gefs-v12/stage2?endpoint_override=renc.osn.xsede.org") |> 
-  filter(reference_datetime >= yesterday,
-         site_id == 'fcre',
-         variable %in% c("surface_downwelling_shortwave_flux_in_air", "precipitation_flux")) |> 
-  mutate(datetime_date = as.Date(datetime)) |>
-  group_by(reference_datetime, datetime_date, variable, parameter) |>
-  summarise(prediction = mean(prediction, na.rm = T), .groups = "drop")
-
-df_noaa_present_daily <- noaa_present_daily |> dplyr::collect()
-
-### water temp forecast
-flare_full_all_results <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org")
-
-df_flare_fcr <- flare_full_all_results |>
- dplyr::filter(reference_datetime >= yesterday_hms,
-               site_id == "fcre",
-               model_id == "asl.ets", #"glm_aed_v1",
-               depth_m == 1.6) |>
- dplyr::collect()
-
-
-#### function from FEO
-# generate_example_forecast
-generate_example_forecast <- function(forecast_date, # a recommended argument so you can pass the date to the function
-                                      model_id,
-                                      targets_url, # where are the targets you are forecasting?
-                                      var, # what variable(s)?
-                                      site, # what site(s)
-                                      forecast_depths = 'focal',
-                                      project_id = 'vera4cast') {
-
-  # Put your forecast generating code in here, and add/remove arguments as needed.
-  # Forecast date should not be hard coded
-  # This is an example function that also grabs weather forecast information to be used as co-variates
-
-  if (site == 'fcre' & forecast_depths == 'focal') {
-    forecast_depths <- 1.6
-  }
-
-  if (site == 'bvre' & forecast_depths == 'focal') {
-    forecast_depths <- 1.5
-  }
-  #-------------------------------------
-
-  # Get targets
-  message('Getting targets')
-  targets <- readr::read_csv(targets_url, show_col_types = F) |>
-    filter(variable %in% var,
-           site_id %in% site,
-           depth_m %in% forecast_depths,
-           datetime < forecast_date)
-  #-------------------------------------
-
-  # Get the weather data
-  message('Getting weather')
-  # uses the RopenMeteo function to grab weather from the sites
-  # and you can specify the length of the future period and number of days in the past
-    # you can modify the data that are collected in the get_daily_weather function
-    # or if you want to generate an hourly forecast, you can use get_hourly_weather
-  weather_dat <- site |>
-    map_dfr(get_daily_weather, site_list = site_list, past = 60, future = 30, vars = "temperature_2m")
-  #-------------------------------------
-
-  # split it into historic and future
-   historic_weather <- weather_dat |>
-    filter(datetime < forecast_date) |>
-    # calculate a daily mean (remove ensemble)
-    group_by(datetime, variable, site_id) |>
-    summarise(prediction = mean(prediction)) |>
-    pivot_wider(names_from = variable, values_from = prediction) |>
-    mutate(air_temperature = air_temperature - 273.15)
-
-  forecast_weather <- weather_dat |>
-    filter(datetime >= forecast_date) |>
-    pivot_wider(names_from = variable, values_from = prediction) |>
-    mutate(air_temperature = air_temperature - 273.15)
-  #-------------------------------------
-
-  # Fit model
-  message('Fitting model')
-  fit_df <- targets |>
-    pivot_wider(names_from = variable, values_from = observation) |>
-    left_join(historic_weather)
-
-  model_fit <- lm(fit_df$Temp_C_mean ~ fit_df$air_temperature)
-  #-------------------------------------
-
-  # Generate forecasts
-  message('Generating forecast')
-  forecast <- (forecast_weather$air_temperature * model_fit$coefficients[2]) + model_fit$coefficients[1]
-
-  forecast_df <- data.frame(datetime = forecast_weather$datetime,
-                            reference_datetime = forecast_date,
-                            model_id = model_id,
-                            site_id = forecast_weather$site_id,
-                            parameter = forecast_weather$parameter,
-                            family = 'ensemble',
-                            prediction = forecast,
-                            variable = var,
-                            depth_m = forecast_depths,
-                            duration = targets$duration[1],
-                            project_id = project_id)
-  #-------------------------------------
-
-  return(forecast_df)
-
-}
-
-####function I made
-
-fdom_forecast_full_uncert <- function(variable = "fDOM_QSU_mean", forecast_start_date, n_members, forecast_horizon,
-                          fdom_IC_df, noaa_df, flare_df, output_folder){
-  
-    #establish forecasted dates
-  forecasted_dates <- seq(from = ymd(forecast_start_date), to = ymd(forecast_start_date) + forecast_horizon, by = "day")
-
-  #get current fdom value
-  curr_fdom <- current_value(fdom_IC_df, variable, forecast_start_date)
-  
-  #set up df of different initial conditions for IC uncert
-  ic_df <- tibble(forecast_date = rep(as.Date(forecast_start_date), times = n_members),
-                ensemble_member = c(1:n_members),
-                forecast_variable = "fdom",
-                value = get_IC_uncert(curr_fdom, n_members, ic_sd = 0.1),
-                uc_type = "total")
-
-  #set up table to hold forecast output 
-forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_members),
-                              ensemble_member = rep(1:n_members, each = length(forecasted_dates)),
-                              reference_datetime = forecast_start_date,
-                              Horizon = reference_datetime - forecast_date,
-                              forecast_variable = "fdom",
-                              value = as.double(NA),
-                              uc_type = "total") |> 
-  rows_update(ic_df, by = c("forecast_date","ensemble_member","forecast_variable", "uc_type")) # adding IC uncert
-  
-  
-  #for loop to run forecast 
-  for(i in 2:length(forecasted_dates)) {
-  
-  #pull prediction dataframe for the relevant date
-  fdom_pred <- forecast_full_unc %>%
-    filter(forecast_date == forecasted_dates[i])
-  
-  #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
-  met_sw_driv <- daily_noaa %>%
-    filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
-    filter(reference_datetime == forecast_start_date) |> 
-    filter(datetime_date == forecasted_dates[i])
-  
-  met_precip_driv <- daily_noaa %>%
-    filter(variable == "precipitation_flux") |> 
-    filter(reference_datetime == forecast_start_date) |> 
-    filter(datetime_date == forecasted_dates[i])
-  
-    met_precip_lag_driv <- daily_noaa %>%
-    filter(variable == "precipitation_flux") |> 
-    filter(reference_datetime == forecast_start_date) |> 
-    filter(datetime_date == forecasted_dates[i-1])
-    
-  flare_driv <- flare_csv_glm_daily %>%
-    filter(reference_datetime == forecast_start_date) |> 
-    filter(datetime_date == forecasted_dates[i])
-  
-  #pull lagged fdom values
-  fdom_lag <- forecast_full_unc %>%
-    filter(forecast_date == forecasted_dates[i-1])
-  
-  #run model
-  fdom_pred$value <- param_df$beta1 + (fdom_lag$value * param_df$beta2) + (flare_driv$prediction * param_df$beta3) +
-     (met_sw_driv$prediction * param_df$beta4) + (met_precip_driv$prediction * param_df$beta5) + 
-     (met_precip_lag_driv$prediction * param_df$beta6) +
-     rnorm(n = 30, mean = 0, sd = sigma) #process uncert
-  
-  #insert values back into the forecast dataframe
-  forecast_full_unc <- forecast_full_unc %>%
-    rows_update(fdom_pred, by = c("forecast_date","ensemble_member","forecast_variable","uc_type"))
-  
-  } #end for loop
-  
-  
-return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/", output_folder, "/forecast_full_unc_", forecast_start_date, '.csv'))
-)
-  
-}#end function
-
-#### test function 
-
-# ##set up forecast
-#  forecast_start_date <- ymd("2023-01-02")
-# n_members <- 30
-# forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
-# #run function, will genearte csv
-# fdom_forecast_full_uncert(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
-#               n_members = n_members, forecast_horizon = forecast_horizon,
-#                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily,
-#                              output_folder = "20feb24" )
-# 
-# #look at plot
-# read.csv("./ASLO_forecast_output/forecast_full_unc_2023-01-02.csv") |> 
-#   mutate(forecast_date = as.Date(forecast_date)) |> 
-#     # filter(forecast_date > ymd("2023-01-03")) |>
-#   ggplot(aes(x = forecast_date, y = value, color = as.character(ensemble_member)))+
-#   geom_line()
-
-
-
-
-```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ## get model paramters 
-calibrate model for 2021 and set up param and process uncert
+
+calibrate FCR modle for 2022 and set up param and process uncert
 
 ```{r}
-#### Water Q targets
-fcr_water_wide <- read.csv("../Data/GeneratedData/all_water_targets_from_VERAbucket_21feb24.csv") |> 
-  filter(site_id == "fcre",
-         depth_m == 1.6,
-         variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
+#### format data 
+fcr_water_wide <- fcr_waterQ |> 
   mutate(datetime = as.Date(datetime)) |> 
-  filter(datetime >= ymd("2021-01-01"),
-         datetime <= ymd("2021-12-31")) |> 
+  filter(datetime >= ymd("2022-01-01"),
+         datetime <= ymd("2022-12-31")) |> 
   pivot_wider(names_from = variable, values_from = observation) |> 
   select(datetime, Temp_C_mean, fDOM_QSU_mean) 
 
-#### Met targets 
-
-fcr_met_wide <- read.csv("../Data/GeneratedData/all_met_targets_from_VERAbucket_21feb24.csv")   |> 
-  filter(site_id == "fcre",
-         variable %in% c("ShortwaveRadiationUp_Wm2_mean", "Rain_mm_sum") ) |> 
+met_wide <- met_targets   |> 
     mutate(datetime = as.Date(datetime)) |> 
-  filter(datetime >= ymd("2021-01-01"),
-         datetime <= ymd("2021-12-31")) |> 
+  filter(datetime >= ymd("2022-01-01"),
+         datetime <= ymd("2022-12-31")) |> 
   pivot_wider(names_from = variable, values_from = observation) |> 
   select(datetime, ShortwaveRadiationUp_Wm2_mean, Rain_mm_sum)
 
-#### Join data
-joined_fcr <- left_join(fcr_water_wide, fcr_met_wide, by = "datetime") |> 
+joined_fcr <- left_join(fcr_water_wide, met_wide, by = "datetime") |> 
   mutate(fdom_lag1 = lag(fDOM_QSU_mean),
          rain_lag1 = lag(Rain_mm_sum))
 
@@ -598,7 +313,7 @@ sigma <- sd(residuals, na.rm = TRUE) # Process Uncertainty Noise Std Dev.; this 
 
 ####look at set up for IC uncert 
 ic_sd <- 0.1 #adpating from HLWs temp 4cast using 0.1 and detection limit on fDOM sensor being 0.07 QSU
-ic_uc <- rnorm(n = 30, mean = mean(fcr_fdom_2023$observation, na.rm = T), sd = ic_sd)
+ic_uc <- rnorm(n = 30, mean = mean(fcr_water_wide$fDOM_QSU_mean, na.rm = T), sd = ic_sd)
 hist(ic_uc)
 
 
@@ -620,7 +335,7 @@ current_value <- function(dataframe, variable, start_date){
   
   return(value)
 }
-
+ 
 #function to generate 30 ensembles of fDOM IC based on standard deviation arround current observation
 get_IC_uncert <- function(curr_fdom, n_members, ic_sd = 0.1){
   rnorm(n = n_members, mean = curr_fdom, sd = ic_sd)
@@ -754,22 +469,22 @@ forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_memb
     filter(forecast_date == forecasted_dates[i])
   
   #pull driver ensemble for the relevant date; here we are using all 30 NOAA ensemble members
-  met_sw_driv <- daily_noaa %>%
+  met_sw_driv <- noaa_df %>%
     filter(variable == "surface_downwelling_shortwave_flux_in_air") |> 
     filter(reference_datetime == forecast_start_date) |> 
     filter(datetime_date == forecasted_dates[i])
   
-  met_precip_driv <- daily_noaa %>%
+  met_precip_driv <- noaa_df %>%
     filter(variable == "precipitation_flux") |> 
     filter(reference_datetime == forecast_start_date) |> 
     filter(datetime_date == forecasted_dates[i])
   
-    met_precip_lag_driv <- daily_noaa %>%
+    met_precip_lag_driv <- noaa_df %>%
     filter(variable == "precipitation_flux") |> 
     filter(reference_datetime == forecast_start_date) |> 
     filter(datetime_date == forecasted_dates[i-1])
     
-  flare_driv <- flare_csv_glm_daily %>%
+  flare_driv <- flare_df %>%
     filter(reference_datetime == forecast_start_date) |> 
     filter(datetime_date == forecasted_dates[i])
   
@@ -790,7 +505,7 @@ forecast_full_unc <- tibble(forecast_date = rep(forecasted_dates, times = n_memb
   } #end for loop
   
   
-return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/", output_folder, "/forecast_full_unc_", forecast_start_date, '.csv'))
+return(write.csv(forecast_full_unc, file = paste0("./ASLO_talk_forecast_output/", output_folder, "/forecast_full_unc_", forecast_start_date, '.csv'))
 )
   
 }#end function
@@ -798,14 +513,14 @@ return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/", out
 #### test function 
 
 # ##set up forecast
-#  forecast_start_date <- ymd("2023-01-02")
-# n_members <- 30
-# forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
-# #run function, will genearte csv
-# fdom_forecast_full_uncert(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date, 
-#               n_members = n_members, forecast_horizon = forecast_horizon,
-#                           fdom_IC_df = fcr_fdom_2023, noaa_df = daily_noaa, flare_df = flare_csv_glm_daily,
-#                              output_folder = "20feb24" )
+ forecast_start_date <- ymd("2023-01-02")
+n_members <- 30
+forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023?
+#run function, will genearte csv
+fdom_forecast_full_uncert(variable = "fDOM_QSU_mean", forecast_start_date = forecast_start_date,
+              n_members = n_members, forecast_horizon = forecast_horizon,
+                          fdom_IC_df = fcr_waterQ, noaa_df = noaa_daily, flare_df = fcr_flare,
+                             output_folder = "25apr24" )
 # 
 # #look at plot
 # read.csv("./ASLO_forecast_output/forecast_full_unc_2023-01-02.csv") |> 
@@ -823,15 +538,15 @@ return(write.csv(forecast_full_unc, file = paste0("./ASLO_forecast_output/", out
 running for loop over fdom_forecast function
 ```{r}
 ## set up dates for for loop
-forecast_start_date <- seq(ymd("2023-02-20"), ymd("2023-12-31"), by = "day")
+forecast_start_date <- seq(ymd("2023-01-01"), ymd("2023-12-31"), by = "day")
 
 ##set up inputs to function
 variable <- "fDOM_QSU_mean"
 n_members <- 30
 forecast_horizon <- 16  ## flare forecasts don't seem to go out to 30 days at least in early 2023? 
-fdom_IC_df <- fcr_fdom_2023
-noaa_df <- daily_noaa
-flare_df <- flare_csv_glm_daily
+fdom_IC_df <- fcr_waterQ
+noaa_df <- noaa_daily
+flare_df <- fcr_flare
 
 
 for (j in 1:length(forecast_start_date)) {
