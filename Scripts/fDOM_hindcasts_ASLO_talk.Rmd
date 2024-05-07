@@ -570,12 +570,12 @@ fcr_fdom <- read_csv(targets_url) |>
   mutate(datetime = as.Date(datetime)) |> 
   select(datetime, observation) |> rename(fdom_observed = observation)
 
-head(output_all)
 
-output_stats <- left_join(fcr_output_all, fcr_fdom, by = c("date" = "datetime")) |> 
-  mutate(resid = fdom_observed - value) |> 
+fcr_output_stats <- left_join(fcr_output_all, fcr_fdom, by = "datetime") |> 
+  mutate(resid = fdom_observed - prediction) |> 
+   mutate(Horizon = datetime - reference_datetime) |> 
   #filter(Horizon > 0) |> 
-  mutate(Julian = yday(date),
+  mutate(Julian = yday(datetime),
          Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
          Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
          Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
@@ -583,14 +583,14 @@ output_stats <- left_join(fcr_output_all, fcr_fdom, by = c("date" = "datetime"))
          )
 
 #rmse
-output_stats |> 
+fcr_output_stats |> 
   group_by(Horizon, Season) |> 
-  summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) 
+  summarise(rmse = round(sqrt(mean((prediction - fdom_observed)^2, na.rm = TRUE)), 2) ) 
 
 # rmse <- 
-output_stats |> 
+fcr_output_stats |> 
   group_by(Horizon, Season) |> 
-  summarise(rmse = round(sqrt(mean((value - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
+  summarise(rmse = round(sqrt(mean((prediction - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
   ggplot(aes(x = Horizon, y = rmse, color = Season))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
@@ -598,9 +598,9 @@ output_stats |>
   theme_bw() + theme(legend.position = "top")
 
 #sd <- 
-output_stats |> 
+fcr_output_stats |> 
   group_by(Horizon, Season) |> 
-  summarise(sd = sd(value, na.rm = T)) |> 
+  summarise(sd = sd(prediction, na.rm = T)) |> 
   ggplot(aes(x = Horizon, y = sd, color = Season ))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
@@ -644,7 +644,55 @@ dev.off()
 
 ```
 
+look at rmse or stats or something
 
+```{r}
+#bind in observed fdom 
+bvr_fdom <- read_csv(targets_url) |> 
+  filter(site_id == "bvre",
+         variable == "fDOM_QSU_mean") |> 
+  mutate(datetime = as.Date(datetime)) |> 
+  select(datetime, observation) |> rename(fdom_observed = observation)
+
+
+bvr_output_stats <- left_join(bvr_output_all, bvr_fdom, by = "datetime") |> 
+  mutate(resid = fdom_observed - prediction) |> 
+   mutate(Horizon = datetime - reference_datetime) |> 
+  #filter(Horizon > 0) |> 
+  mutate(Julian = yday(datetime),
+         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+         )
+
+#rmse
+bvr_output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(rmse = round(sqrt(mean((prediction - fdom_observed)^2, na.rm = TRUE)), 2) ) 
+
+# rmse <- 
+bvr_output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(rmse = round(sqrt(mean((prediction - fdom_observed)^2, na.rm = TRUE)), 2) ) |> 
+  ggplot(aes(x = Horizon, y = rmse, color = Season))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  ggtitle("RMSE by season")+
+  theme_bw() + theme(legend.position = "top")
+
+#sd <- 
+bvr_output_stats |> 
+  group_by(Horizon, Season) |> 
+  summarise(sd = sd(prediction, na.rm = T)) |> 
+  ggplot(aes(x = Horizon, y = sd, color = Season ))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  ggtitle("SD by season")+
+  theme_bw() + theme(legend.position = "top")
+
+
+```
 
 
 
