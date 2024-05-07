@@ -411,7 +411,7 @@ forecast_df <- forecast_full_unc |>
          duration, project_id)
   
 
-return(write.csv(forecast_df, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_full_unc_", forecast_date, '.csv')))
+return(write.csv(forecast_df, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_full_unc_", forecast_date, '.csv'), row.names = F))
   
   
 }  ##### end function
@@ -531,6 +531,7 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 climatology function 
 ```{r}
 #function adpated from FEO's github; adding in new write csv for return
+#https://github.com/LTREB-reservoirs/vera4cast/blob/main/R/ClimatologyModelFunction.R
 
 generate_baseline_climatology <- function(targets, # a dataframe already read in
                                           h = 35,
@@ -646,7 +647,7 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
 
       message('climatology generated')
       # return(combined)
-      return(write.csv(combined, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_climatology_", forecast_date, '.csv')))
+      return(write.csv(combined, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_climatology_", forecast_date, '.csv'), row.names = F))
       
     } else {
       message('cannot generate climatology for this period')
@@ -698,6 +699,86 @@ for (j in 1:length(forecast_date)) {
 ```
 
 
+## NNETAR forecasts 
+
+```{r}
+####adapting ADD github code
+#https://github.com/addelany/vera4casts/blob/main/code/combined_workflow/nnetar_workflow.R
+
+##get source scripts from githbub 
+#fableNNETAR
+devtools::source_url("https://raw.githubusercontent.com/addelany/vera4casts/main/code/function_library/nettar_functions/fableNNETAR.R")
+#format_data_NNETAR
+devtools::source_url("https://raw.githubusercontent.com/addelany/vera4casts/main/code/function_library/nettar_functions/format_data_NNETAR.R")
+#interpolate
+devtools::source_url("https://raw.githubusercontent.com/addelany/vera4casts/main/code/function_library/nettar_functions/interpolate.R")
+
+
+## function 
+fdom_nnetar <- function(forecast_date,
+                        targets_url,
+                        var,
+                          forecast_horizon,
+                        output_folder){
+
+#Define targets filepath
+targets <- targets_url
+
+target_variables <- var
+
+for (t in target_variables){
+  
+  print(t)
+
+  #Define start and end dates (needed for interpolation)
+  end_date = forecast_date
+  
+  #Format data
+  dat_NNETAR <- format_data_NNETAR(targets = targets,
+                                   target_var = t,
+                                   end_date = end_date)
+  
+  #Set prediction window and forecast horizon
+  reference_datetime <- forecast_date
+  
+  #Predict variable
+  prediction_df <- fableNNETAR(data = dat_NNETAR,
+                      target_var = t,
+                      reference_datetime = reference_datetime,
+                      forecast_horizon = forecast_horizon) |> 
+    select(-project_id, -duration) ###to save space in files for now ############bring back at some point
+  
+
+    } # close variable iteration loop
+
+#save forecast csv
+
+      return(write.csv(prediction_df, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_nnetar_", forecast_date, '.csv'), row.names = F))
+
+} # end fucntion 
+
+####################### Run forecasts for FCR and BVR #############################3
+
+forecast_date <- seq(ymd("2022-12-29"), ymd("2024-01-31"), by = "day") #ymd("2022-12-12), ymd("2024-01-31")
+
+for (j in 1:length(forecast_date)) {
+  
+  print(forecast_date[j]) 
+  
+  fdom_nnetar(forecast_date = forecast_date[j], targets_url = targets_url, var = c("fDOM_QSU_mean"),
+              forecast_horizon = 16, output_folder = "fcre_bvre_nnetar_run7may24")
+  
+} #end for loop
+
+
+
+# validate
+# vera4castHelpers::forecast_output_validator(forecast_file_abs_path)
+# vera4castHelpers::submit(forecast_file_abs_path, s3_region = "submit", s3_endpoint = "ltreb-reservoirs.org", first_submission = FALSE)
+
+
+
+```
 
 
 ## anlayze forecast outputs 
