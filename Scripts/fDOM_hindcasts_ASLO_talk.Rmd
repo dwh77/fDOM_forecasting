@@ -530,21 +530,16 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 
 climatology function 
 ```{r}
-
-targets_df <- read_csv(targets_url)
-site <- 'fcre'
-var <- 'fDOM_QSU_mean'
-depth <- 1.6
-forecast_date <- ymd("2023-04-15")
+#function adpated from FEO's github; adding in new write csv for return
 
 generate_baseline_climatology <- function(targets, # a dataframe already read in
                                           h = 35,
                                           site, # vector of site_ids
                                           model_id = 'climatology',
                                           var, # single variable
-                                          depth,
-                                          forecast_date) {
-  
+                                          depth = 'target',
+                                          forecast_date,
+                                          output_folder) {
   message('Generating climatology for ',  var, ' at ', site)
 
   if (depth == 'target') {
@@ -650,7 +645,9 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
         as_tibble()
 
       message('climatology generated')
-      return(combined)
+      # return(combined)
+      return(write.csv(combined, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_climatology_", forecast_date, '.csv')))
+      
     } else {
       message('cannot generate climatology for this period')
       return(NULL)
@@ -660,11 +657,45 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
 }
 
 
+```
+
+run FCR and BVR climatology forecasts 
+
+```{r}
+
+### get targets data
+targets_df <- read_csv(targets_url)
+
+# testz <- generate_baseline_climatology(targets = targets_df, h = 35, site = "fcre", model_id = "climatology",
+#                                        var = "fDOM_QSU_mean", depth = 1.6, forecast_date = ymd("2023-12-06") )
+
+
+### set sequence of dates 
+forecast_date <- seq(ymd("2022-12-12"), ymd("2024-01-31"), by = "day")
+
+#### FCR forecast loop
+
+for (j in 1:length(forecast_date)) {
+  
+  print(forecast_date[j]) 
+  
+  generate_baseline_climatology(targets = targets_df, h = 16, site = "fcre", model_id = "climatology",
+                                       var = "fDOM_QSU_mean", depth = 1.6, forecast_date = forecast_date[j],
+                                       output_folder = "fcre_climatology_run7may24")
+          }
+
+
+#### BVR forecast loop 
+for (j in 1:length(forecast_date)) {
+    print(forecast_date[j]) 
+    generate_baseline_climatology(targets = targets_df, h = 16, site = "bvre", model_id = "climatology",
+                                       var = "fDOM_QSU_mean", depth = 1.5, forecast_date = forecast_date[j],
+                                       output_folder = "bvre_climatology_run7may24")
+}
+
 
 
 ```
-
-
 
 
 
