@@ -1157,67 +1157,101 @@ head(bvr_climatology_output_all)
 
 ```
 
+## Persistence outputs 
+
+```{r}
+#bind forecast outputs into one data frame 
+fcr_persistence_output_all <- list.files(path = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fcre_fable_persistence_run15may24", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows() 
+
+head(fcr_persistence_output_all)
+
+bvr_persistence_output_all <- list.files(path = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/bvre_fable_persistence_run15may24", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows() 
+
+head(bvr_persistence_output_all)
 
 
+```
 
-## AR vs Climatology 
+
+## Compare: AR, NNETAR, Persistence, Climatology
 
 ```{r}
 
-#look at data fromats
+### look at data fromats
 head(bvr_output_all)
 head(fcr_output_all)
 head(bvr_climatology_output_all)
 head(fcr_climatology_output_all)
+head(nnetar_output_all) 
+head(fcr_persistence_output_all)
+head(bvr_persistence_output_all)
 
-#format data
+### format data
+#AR
 ARoutputs <- rbind(bvr_output_all, fcr_output_all) |> 
   select(-duration, -project_id) |> 
   group_by(datetime, reference_datetime, site_id) |> 
   summarise(mu_AR = mean(prediction),
             sigma_AR = sd(prediction))
 
+#nnetar
+nnetar_output <- nnetar_output_all |> 
+  group_by(datetime, reference_datetime, site_id) |> 
+  summarise(mu_NNETAR = mean(prediction),
+            sigma_NNETAR = sd(prediction))
+
+#climatology
 climatology_outputs <- rbind(bvr_climatology_output_all, fcr_climatology_output_all) |> 
   select(-1, -project_id, -duration) |> 
   select(datetime, reference_datetime, site_id, parameter, prediction) |> 
   pivot_wider(names_from = parameter, values_from = prediction) |> 
   rename(mu_clim = mu, sigma_clim = sigma)
 
-nnetar_output <- nnetar_output_all |> 
-  group_by(datetime, reference_datetime, site_id) |> 
-  summarise(mu_NNETAR = mean(prediction),
-            sigma_NNETAR = sd(prediction))
+#persistence
+persistence_outputs <- rbind(fcr_persistence_output_all, bvr_persistence_output_all) |> 
+  select( -project_id, -duration) |> 
+  select(datetime, reference_datetime, site_id, parameter, prediction) |> 
+  pivot_wider(names_from = parameter, values_from = prediction) |> 
+  rename(mu_persist = mu, sigma_persist = sigma)
   
 
-#join climatology to AR and NNETAR
-AR_clim_nnetar_outputs <- full_join(ARoutputs, climatology_outputs, by = c("datetime", "reference_datetime", "site_id")) |>
+### join 4 models toghether 
+AR_clim_nnetar_persist_outputs <- full_join(ARoutputs, climatology_outputs, by = c("datetime", "reference_datetime", "site_id")) |>
   full_join(nnetar_output,  by = c("datetime", "reference_datetime", "site_id")) |> 
-  mutate(Horizon = datetime - reference_datetime) |> 
-  mutate(Julian = yday(datetime),
-         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
-         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
-         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
-         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
-         )
+  full_join(persistence_outputs,  by = c("datetime", "reference_datetime", "site_id")) |> 
+  mutate(Horizon = datetime - reference_datetime)# |> 
+  # mutate(Julian = yday(datetime),
+  #        Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+  #        Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+  #        Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+  #        Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+  #        )
 
 #join obersved data
-fcr_bvr_fdom_observed <- targets_df |> 
+fcr_bvr_fdom_observed <- targets |> 
   filter(variable == "fDOM_QSU_mean") |> 
   select(site_id, datetime, observation)
  
-AR_clim_nnetar_outputs_observed <- left_join(AR_clim_nnetar_outputs, fcr_bvr_fdom_observed, by = c("datetime", "site_id")) |> 
+AR_clim_nnetar_persist_outputs_observed <- left_join(AR_clim_nnetar_persist_outputs, fcr_bvr_fdom_observed, by = c("datetime", "site_id")) |> 
   mutate(resid_AR = observation - mu_AR,
          resid_clim = observation - mu_clim,
-         resid_NNETAR = observation - mu_NNETAR)
+         resid_NNETAR = observation - mu_NNETAR,
+         resid_persist = observation - mu_persist)
+
 
 ### PLOTS 
 
 #rmse
-rmsefig <- AR_clim_nnetar_outputs_observed |> 
+rmsefig <- AR_clim_nnetar_persist_outputs_observed |> 
   group_by(Horizon, site_id) |> 
   summarise(rmse_AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
             rmse_clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2)) |> 
+            rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+             rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |> 
   pivot_longer(-c(1:2)) |> 
   filter(Horizon > 0,
          Horizon < 17) |> 
@@ -1228,11 +1262,12 @@ rmsefig <- AR_clim_nnetar_outputs_observed |>
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
 #sd
-sdfig <- AR_clim_nnetar_outputs_observed |> 
+sdfig <- AR_clim_nnetar_persist_outputs_observed |> 
   group_by(Horizon, site_id) |> 
   summarise(sd_AR = mean(sigma_AR, na.rm = T),
             sd_clim = mean(sigma_clim, na.rm = T),
-            sd_NNETAR = mean(sigma_NNETAR, na.rm = T)) |> 
+            sd_NNETAR = mean(sigma_NNETAR, na.rm = T),
+            sd_persist = mean(sigma_persist, na.rm = T)) |> 
   pivot_longer(-c(1:2)) |> 
   filter(Horizon > 0,
          Horizon < 17) |> 
@@ -1244,10 +1279,19 @@ sdfig <- AR_clim_nnetar_outputs_observed |>
 
 ggpubr::ggarrange(rmsefig, sdfig, nrow = 1)
 
-#fdom_observed_ts <- 
-AR_clim_nnetar_outputs_observed |> 
+### fDOM TS plots 
+
+AR_clim_nnetar_persist_outputs_observed |> 
   ggplot(aes(x = datetime, y = observation, color = site_id))+
   geom_point()+
+  ggtitle("Dec 22 - Jan 24")+
+  labs(x = element_blank(), y = "fDOM (QSU)", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+fcr_bvr_fdom_observed |> 
+  ggplot(aes(x = datetime, y = observation, color = site_id))+
+  geom_point()+
+  ggtitle("FCR and BVR")+
   labs(x = element_blank(), y = "fDOM (QSU)", color = "Reservoir")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
   
