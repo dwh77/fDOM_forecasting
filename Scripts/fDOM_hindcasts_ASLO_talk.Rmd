@@ -699,6 +699,165 @@ for (j in 1:length(forecast_date)) {
 ```
 
 
+## Persistence forecasts
+
+```{r}
+#load packages
+library(tidyverse)
+library(lubridate)
+library(aws.s3)
+library(imputeTS)
+library(tsibble)
+library(fable)
+
+#from https://github.com/LTREB-reservoirs/vera4cast/blob/main/R/fablePersistenceModelFunction.R
+# Function carry out a random walk forecast
+generate_baseline_persistenceRW <- function(targets,
+                                            site,
+                                            var,
+                                            forecast_date = Sys.Date(),
+                                            model_id = 'persistenceRW',
+                                            h,
+                                            depth = 'target',
+                                            bootstrap = FALSE,
+                                            boot_number = 200, 
+                                            output_folder) {
+
+  message('Generating persistenceRW forecast for ',  var, ' at ', site)
+
+  if (depth == 'target') {
+    # only generates forecasts for target depths
+    target_depths <- c(1.5, 1.6, NA)
+  } else {
+    target_depths <- depth
+  }
+
+  targets_ts <- targets |>
+    mutate(datetime = lubridate::as_date(datetime)) |>
+    filter(variable %in% var,
+           site_id %in% site,
+           depth_m %in% target_depths,
+           datetime < forecast_date) |>
+    group_by(variable, site_id, depth_m, duration, project_id, datetime) |>
+    summarise(observation = mean(observation), .groups = 'drop') |>  # get rid of the repeat observations by finding the mean
+    as_tsibble(key = c('variable', 'site_id', 'depth_m', 'duration', 'project_id'), index = 'datetime') |>
+    # add NA values up to today (index)
+    fill_gaps(.end = forecast_date)
+
+
+  # Work out when the forecast should start
+  forecast_starts <- targets %>%
+    dplyr::filter(!is.na(observation) & site_id == site & variable == var & datetime < forecast_date) %>%
+    # Start the day after the most recent non-NA value
+    dplyr::summarise(start_date = as_date(max(datetime)) + lubridate::days(1)) %>% # Date
+    dplyr::mutate(h = (forecast_date - start_date) + h) %>% # Horizon value
+    dplyr::ungroup()
+
+  # filter the targets data set to the site_var pair
+  targets_use <- targets_ts |>
+    dplyr::filter(datetime < forecast_starts$start_date)
+
+  if (nrow(targets_use) == 0) {
+    message(paste0('no targets available, no forecast run for ', site, ' ', var, '. Check site_id and variable name'))
+    return(NULL)
+
+  } else {
+
+    RW_model <- targets_use %>%
+      fabletools::model(RW = fable::RW(observation))
+
+
+    if (bootstrap == T) {
+      forecast <- RW_model %>%
+        fabletools::generate(h = as.numeric(forecast_starts$h),
+                             bootstrap = T,
+                             times = boot_number) |>
+        rename(paramter = .rep,
+               prediction = .sim) |>
+        mutate(model_id = model_id,
+               family = 'ensemble',
+               reference_datetime = forecast_date)  |>
+        select(any_of(c("model_id", "datetime", "reference_datetime","site_id", "variable", "family",
+                        "parameter", "prediction", "project_id", "duration", "depth_m" )))|>
+        select(-any_of('.model'))|>
+        filter(datetime > reference_datetime)|>
+        ungroup() |>
+        as_tibble()
+
+      return(forecast)
+
+    }  else {
+      # don't use bootstrapping
+      forecast <- RW_model %>% fabletools::forecast(h = as.numeric(forecast_starts$h))
+
+      # extract parameters
+      parameters <- distributional::parameters(forecast$observation)
+
+      # make right format
+      forecast <- bind_cols(forecast, parameters) |>
+        pivot_longer(mu:sigma,
+                     names_to = 'parameter',
+                     values_to = 'prediction') |>
+        mutate(model_id = model_id,
+               family = 'normal',
+               reference_datetime=forecast_date) |>
+        select(all_of(c("model_id", "datetime", "reference_datetime","site_id", "variable", "family",
+                        "parameter", "prediction", "project_id", "duration", "depth_m" ))) |>
+        select(-any_of('.model')) |>
+        filter(datetime > reference_datetime) |>
+        ungroup() |>
+        as_tibble()
+      
+      
+      #return(forecast)
+      
+      return(write.csv(forecast, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_persistence_", forecast_date, '.csv'), row.names = F))
+    }
+
+  }
+}
+
+# z <- generate_baseline_persistenceRW(targets = targets, site = "fcre", var = "fDOM_QSU_mean", 
+#                                      forecast_date = ymd("2023-04-15"), model_id = "fable_persistence", 
+#                                      h = 17, depth = 1.6, bootstrap = F  )
+
+```
+
+run FCR and BVR persistence forecasts 
+
+```{r}
+
+### get targets data
+targets <- read_csv(targets_url)
+
+### set sequence of dates 
+forecast_date <- seq(ymd("2022-12-12"), ymd("2024-01-31"), by = "day")
+
+#### FCR forecast loop
+
+for (j in 1:length(forecast_date)) {
+  
+  print(forecast_date[j]) 
+  
+  generate_baseline_persistenceRW(targets = targets, site = "fcre", var = "fDOM_QSU_mean", 
+                                  forecast_date = forecast_date[j], model_id = "fable_persistence", 
+                                  h = 17, depth = 1.6, bootstrap = F, 
+                                  output_folder = "fcre_fable_persistence_run15may24")
+              } #end loop
+
+
+#### BVR forecast loop
+for (j in 1:length(forecast_date)) {
+    print(forecast_date[j]) 
+    generate_baseline_persistenceRW(targets = targets, site = "bvre", var = "fDOM_QSU_mean", 
+                                  forecast_date = forecast_date[j], model_id = "fable_persistence", 
+                                  h = 17, depth = 1.5, bootstrap = F, 
+                                  output_folder = "bvre_fable_persistence_run15may24")
+              } #end loop
+
+```
+
+
 ## NNETAR forecasts 
 
 ```{r}
@@ -800,23 +959,22 @@ head(fcr_output_all)
 make pdf plot of all forecasts generated 
 ```{r}
 #facet for all forecasts; HAVE TO RUN AS CHUNK
-pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fcre_run6may24/all_forecasts.pdf", height = 250)
-
-fcr_output_all |> 
-  mutate(Horizon = datetime - reference_datetime) |> 
-   #filter(reference_datetime == ymd("2023-01-05")) |> 
-  ggplot(aes(x = Horizon, y = prediction, color = as.character(parameter)))+ 
-  geom_line()+
-  facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
-  guides(color = "none")+
-  theme_bw()
-
-dev.off()
+# pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fcre_run6may24/all_forecasts.pdf", height = 250)
+# 
+# fcr_output_all |> 
+#   mutate(Horizon = datetime - reference_datetime) |> 
+#    #filter(reference_datetime == ymd("2023-01-05")) |> 
+#   ggplot(aes(x = Horizon, y = prediction, color = as.character(parameter)))+ 
+#   geom_line()+
+#   facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
+#   guides(color = "none")+
+#   theme_bw()
+# 
+# dev.off()
 
 ```
 
 look at rmse or stats or something
-
 ```{r}
 #bind in observed fdom 
 fcr_fdom <- read_csv(targets_url) |> 
@@ -880,27 +1038,25 @@ head(bvr_output_all)
 
 ```
 
-
 make pdf plot of all forecasts generated 
 ```{r}
 #facet for all forecasts; HAVE TO RUN AS CHUNK
-pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/bvre_run6may24/all_forecasts.pdf", height = 250)
-
-bvr_output_all |> 
-  mutate(Horizon = datetime - reference_datetime) |> 
-   #filter(reference_datetime == ymd("2023-01-05")) |> 
-  ggplot(aes(x = Horizon, y = prediction, color = as.character(parameter)))+ 
-  geom_line()+
-  facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
-  guides(color = "none")+
-  theme_bw()
-
-dev.off()
+# pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/bvre_run6may24/all_forecasts.pdf", height = 250)
+# 
+# bvr_output_all |> 
+#   mutate(Horizon = datetime - reference_datetime) |> 
+#    #filter(reference_datetime == ymd("2023-01-05")) |> 
+#   ggplot(aes(x = Horizon, y = prediction, color = as.character(parameter)))+ 
+#   geom_line()+
+#   facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
+#   guides(color = "none")+
+#   theme_bw()
+# 
+# dev.off()
 
 ```
 
 look at rmse or stats or something
-
 ```{r}
 #bind in observed fdom 
 bvr_fdom <- read_csv(targets_url) |> 
@@ -966,19 +1122,19 @@ head(nnetar_output_all)
 make pdf plot of all forecasts generated 
 ```{r}
 #facet for all forecasts; HAVE TO RUN AS CHUNK
-pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fcre_bvre_nnetar_run7may24/bvre_all_forecasts.pdf", height = 250)
-
-nnetar_output_all |> 
-  mutate(Horizon = datetime - reference_datetime) |> 
-  filter(site_id == "bvre") |> 
-   # filter(reference_datetime <= ymd("2023-01-05")) |> 
-  ggplot(aes(x = Horizon, y = prediction, color = as.character(parameter)))+ 
-  geom_line()+
-  facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
-  guides(color = "none")+
-  theme_bw()
-
-dev.off()
+# pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fcre_bvre_nnetar_run7may24/bvre_all_forecasts.pdf", height = 250)
+# 
+# nnetar_output_all |> 
+#   mutate(Horizon = datetime - reference_datetime) |> 
+#   filter(site_id == "bvre") |> 
+#    # filter(reference_datetime <= ymd("2023-01-05")) |> 
+#   ggplot(aes(x = Horizon, y = prediction, color = as.character(parameter)))+ 
+#   geom_line()+
+#   facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
+#   guides(color = "none")+
+#   theme_bw()
+# 
+# dev.off()
 
 ```
 
@@ -1087,6 +1243,48 @@ sdfig <- AR_clim_nnetar_outputs_observed |>
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
 ggpubr::ggarrange(rmsefig, sdfig, nrow = 1)
+
+#fdom_observed_ts <- 
+AR_clim_nnetar_outputs_observed |> 
+  ggplot(aes(x = datetime, y = observation, color = site_id))+
+  geom_point()+
+  labs(x = element_blank(), y = "fDOM (QSU)", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  
+
+
+####trying new forecast plot
+fcr_output_all |> 
+  filter(reference_datetime == ymd("2023-04-29")
+         #site_id == "fcre"
+         ) |> 
+  left_join(fcr_bvr_fdom_observed, by = c("datetime", "site_id")) |>  
+  group_by(datetime, site_id) |> 
+  mutate(mean = mean(prediction, na.rm=T),
+         quantile02.5 = quantile(prediction, 0.025),
+         quantile97.5 = quantile(prediction, 0.975)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5),
+                  alpha = 0.4)+
+  geom_line(aes(x = datetime, y = mean))+
+  facet_wrap(~site_id, scales = "free") +
+  labs(x = 'datetime', y = 'predicted') 
+
+
+
+
+   ggplot() +
+    geom_point(aes(datetime, observation)) +
+    geom_ribbon_interactive(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5,
+                                fill = model_id, data_id = model_id, tooltip = model_id),
+                            alpha = 0.2, show.legend=FALSE) +
+    geom_line_interactive(aes(datetime, mean, col = model_id,
+                              tooltip = model_id, data_id = model_id), show.legend=show.legend) +
+    labs(x = 'datetime', y = 'predicted') +
+    facet_wrap(~site_id, scales = "free", ncol=ncol) +
+    guides(x =  guide_axis(angle = 45)) +
+    theme_bw()
 
 
 ```
