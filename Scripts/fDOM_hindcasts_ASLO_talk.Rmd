@@ -1243,6 +1243,7 @@ AR_clim_nnetar_persist_outputs_observed <- left_join(AR_clim_nnetar_persist_outp
          resid_persist = observation - mu_persist)
 
 
+
 ### PLOTS 
 
 #rmse
@@ -1252,10 +1253,10 @@ rmsefig <- AR_clim_nnetar_persist_outputs_observed |>
   summarise(rmse_AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
             rmse_clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
             rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-             rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |> 
-  pivot_longer(-c(1:2)) |> 
+             rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  pivot_longer(-c(1:2)) |>
   filter(Horizon > 0,
-         Horizon < 17) |> 
+         Horizon < 17) |>
   ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
@@ -1303,29 +1304,33 @@ fcr_bvr_fdom_observed |>
    
 AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
-  mutate(Month = month(reference_datetime)) |> 
-  filter(Month %in% c(7,8,9,11,12,1)) |> 
-  mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
-  group_by(Horizon, site_id, Season) |> 
-  summarise(rmse_AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2)) |> 
-            # rmse_clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            # rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-            #  rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |> 
-  # pivot_longer(-c(1:3)) |> 
   filter(Horizon > 0,
          Horizon < 17) |> 
-  ggplot(aes(x = Horizon, y = rmse_AR, color = site_id, shape = Season, linetype = Season))+
+  mutate(Month = month(as.Date(datetime))) |> 
+  filter(Month %in% c(7,8,9, 11,12,1)) |> 
+   mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
+  group_by(Horizon, site_id, Season) |> 
+  summarise(rmse_AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
+            rmse_clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+             rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  pivot_longer(-c(1:3)) |> 
+  ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
+  facet_wrap(~Season, nrow = 1, scales = "fixed")+
   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
-  #scale_x_continuous(breaks = seq(1,16, by = 5))+
   ggtitle("RMSE")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
 
+  
+  
+
 ```
 
 ##make example forecast plots
+
 
 ```{r}
 
@@ -1341,6 +1346,22 @@ climatology_for_plots <- rbind(fcr_climatology_output_all, bvr_climatology_outpu
          quantile97.5 = qnorm(0.975, mu, sigma)) |> 
   mutate(model_id = "clim")
 
+##code to make plots of all climatology forecasts, run in own chunk
+# pdf("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/bvre_climatology_all_forecasts.pdf", height = 250)
+# 
+# climatology_for_plots |>
+#  #filter(reference_datetime <= ymd("2023-01-05")) |>
+#   mutate(Horizon = datetime - reference_datetime) |>
+#    filter(site_id == "bvre") |>
+#   ggplot()+
+#   geom_ribbon(aes(x = Horizon, ymin = quantile02.5, ymax = quantile97.5),
+#                   alpha = 0.4)+
+#   geom_line(aes(x = Horizon, y = mean))+
+#   facet_wrap(~reference_datetime, ncol = 4, scales = "free_y")+
+#   guides(color = "none")+
+#   theme_bw()
+# 
+# dev.off()
 
  ###### put persistence together 
 persistence_for_plots <- rbind(fcr_persistence_output_all, bvr_persistence_output_all) |> 
@@ -1461,6 +1482,28 @@ ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/D
 
 
 ## CRPS
+
+trial getting data in order 
+
+```{r}
+
+zz <- AR_clim_nnetar_persist_outputs_observed |> 
+  filter(site_id == "fcre") |> 
+  select(datetime, reference_datetime, site_id, observation, mu_AR, sigma_AR) |>  
+  rename(mu = mu_AR, sigma = sigma_AR) |> 
+  pivot_longer(-c(1:4)) |> 
+  rename(parameter = name, prediction = value) |> 
+  mutate(family = "normal") |> 
+  mutate(datetime = as.Date(datetime),
+         Horizon = datetime - reference_datetime)
+  group_by(reference_datetime, Horizon) 
+    # mutate(crps = )
+
+generic_crps(family = zz$family, parameter = zz$parameter, prediction = zz$prediction, observation = zz$observation)
+
+
+```
+
 
 RQT function that goes into script below
 ```{r}
