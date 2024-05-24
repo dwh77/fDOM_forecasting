@@ -1368,7 +1368,7 @@ AR_clim_nnetar_persist_outputs_observed |>
 
 ```{r}
 
-############ making example forecast plots 
+############ put data together
   
  ###### put climatology together 
 climatology_for_plots <- rbind(fcr_climatology_output_all, bvr_climatology_output_all) |> 
@@ -1436,33 +1436,15 @@ combined_for_plots <- rbind(climatology_for_plots, persistence_for_plots, AR_for
   left_join(fcr_bvr_fdom_observed,  by = c("datetime", "site_id"))
 
 
-#### make example plot 
-#for just one day and model, two reservoirs
-combined_for_plots |> 
-  filter(reference_datetime == ymd("2023-04-15"),
-         model_id == "AR",
-         ) |> 
-  ggplot()+
-  geom_point(aes(datetime, observation)) +
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5),
-                  alpha = 0.4)+
-  geom_line(aes(x = datetime, y = mean))+
-  facet_wrap(~site_id, scales = "free") +
-  labs(x = 'datetime', y = 'predicted') 
+################################### make example plot ##################################################
 
-##get week before 
-weekbefore <- fcr_bvr_fdom_observed |> 
-    filter(datetime <= ymd("2023-04-15"),
-           datetime >= ymd("2023-04-15") - 7) 
+########### just forecast ribbons
 
-
-####### plots for talk 
 ar_ex <- combined_for_plots |> 
   mutate(datetime = as.Date(datetime)) |> 
   filter(reference_datetime == ymd("2023-06-15"),
          model_id == "AR",
          ) |> 
-  #rbind(weekbefore) |> 
   ggplot()+
   geom_point(aes(datetime, observation)) +
   geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
@@ -1473,30 +1455,12 @@ ar_ex <- combined_for_plots |>
   guides(x =  guide_axis(angle = 30)) +
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/ar_ex.jpg",
-       ar_ex, device = "jpg", width = 250, height = 150, units = "mm")
-
-
-ar_persist_ex <- combined_for_plots |> 
-  mutate(datetime = as.Date(datetime)) |> 
-  filter(reference_datetime == ymd("2023-06-15"),
-         model_id %in% c("AR", "persist"),
-         ) |> 
-  #rbind(weekbefore) |> 
-  ggplot()+
-  geom_point(aes(datetime, observation)) +
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean, col = model_id))+
-  facet_wrap(~site_id, scales = "free") +
-  # geom_vline(xintercept = ymd("2023-04-16"))
-  labs(x = 'datetime', y = 'fDOM (QSU)') +
-  guides(x =  guide_axis(angle = 30)) +
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+# ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/ar_ex.jpg",
+#        ar_ex, device = "jpg", width = 250, height = 150, units = "mm")
 
 all_ex <- combined_for_plots |> 
   mutate(datetime = as.Date(datetime)) |> 
   filter(reference_datetime == ymd("2023-06-15")) |> 
-  #rbind(weekbefore) |> 
   ggplot()+
   geom_point(aes(datetime, observation)) +
   geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
@@ -1507,9 +1471,93 @@ all_ex <- combined_for_plots |>
   guides(x =  guide_axis(angle = 30)) +
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_ex.jpg",
-       all_ex, device = "jpg", width = 250, height = 150, units = "mm")
+# ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_ex.jpg",
+#        all_ex, device = "jpg", width = 250, height = 150, units = "mm")
   
+
+
+######### with past observations 
+##get week before and example forecast
+weekbefore <- fcr_bvr_fdom_observed |> 
+    filter(datetime <= ymd("2023-07-15"),
+           datetime >= ymd("2023-07-15") - 7) 
+
+example_forecast_data <- combined_for_plots |> 
+  filter(reference_datetime == ymd("2023-07-15"))
+  
+### just observations
+pre_forecast_fig <- example_forecast_data |> 
+  filter(model_id == "AR") |> 
+  rbind(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2023-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation, fill = model_id)) +
+  facet_wrap(~site_id, scales = "fixed") +
+  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  ylim(0,40)+
+  guides(x =  guide_axis(angle = 30)) +
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/pre_4cast_fig.jpg",
+       pre_forecast_fig, device = "jpg", width = 250, height = 150, units = "mm")
+
+### pre observations and AR forecast
+
+ar_forecast_fig <- example_forecast_data |> 
+  filter(model_id == "AR") |> 
+  rbind(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2023-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.POSIXct("2023-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  facet_wrap(~site_id, scales = "fixed") +
+  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  ylim(0,40)+
+  guides(x =  guide_axis(angle = 30)) +
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/ar_4cast_fig.jpg",
+       ar_forecast_fig, device = "jpg", width = 250, height = 150, units = "mm")
+
+## pre observations and all forecasts
+all_forecast_fig <- example_forecast_data |> 
+  rbind(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2023-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.POSIXct("2023-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  facet_wrap(~site_id, scales = "fixed") +
+  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  ylim(0,40)+
+  guides(x =  guide_axis(angle = 30)) +
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_4cast_fig.jpg",
+       all_forecast_fig, device = "jpg", width = 250, height = 150, units = "mm")
+
+
+## all observations and  forecasts
+all_forecast_fig_withobs <- example_forecast_data |> 
+  rbind(weekbefore) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.POSIXct("2023-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  facet_wrap(~site_id, scales = "fixed") +
+  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  ylim(0,40)+
+  guides(x =  guide_axis(angle = 30)) +
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_4cast_fig_withobs.jpg",
+       all_forecast_fig_withobs, device = "jpg", width = 250, height = 150, units = "mm")
+
+
 
 ```
 
