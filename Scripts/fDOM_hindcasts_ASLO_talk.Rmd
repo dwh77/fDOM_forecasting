@@ -1247,47 +1247,75 @@ AR_clim_nnetar_persist_outputs_observed <- left_join(AR_clim_nnetar_persist_outp
 ### PLOTS 
 
 #rmse
-#rmsefig <- 
-  AR_clim_nnetar_persist_outputs_observed |> 
+rmsefig_allyear_AR <- AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
   group_by(Horizon, site_id) |> 
   summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
             Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            ML = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
             Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:2)) |>
   rename(model = name) |> 
-  filter(Horizon > 0,
+  filter(model == "AR",
+         Horizon > 0,
          Horizon < 17) |>
-  ggplot(aes(x = Horizon, y = value, color = site_id, shape = model, linetype = model))+
+  ggplot(aes(x = Horizon, y = value, color = model))+ #, shape = model, linetype = model
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
   facet_wrap(~site_id)+
   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
   # ggtitle("RMSE")+
   labs(x = "Horizon", y = "RMSE (QSU)")+
-    guides(color = "none")+
+    # guides(color = "none")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
-#sd
-sdfig <- AR_clim_nnetar_persist_outputs_observed  |> 
-  filter(reference_datetime >= ymd("2023-02-01")) |>  
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_ar_allyear.jpg",
+       rmsefig_allyear_AR, device = "jpg", width = 250, height = 150, units = "mm")
+
+
+rmsefig_allyear_allmodel <- AR_clim_nnetar_persist_outputs_observed |> 
+  filter(reference_datetime >= ymd("2023-02-01")) |> 
   group_by(Horizon, site_id) |> 
-  summarise(sd_AR = mean(sigma_AR, na.rm = T),
-            sd_clim = mean(sigma_clim, na.rm = T),
-            sd_NNETAR = mean(sigma_NNETAR, na.rm = T),
-            sd_persist = mean(sigma_persist, na.rm = T)) |> 
-  pivot_longer(-c(1:2)) |> 
+  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            ML = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  pivot_longer(-c(1:2)) |>
+  rename(model = name) |> 
   filter(Horizon > 0,
-         Horizon < 17) |> 
-  ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
+         Horizon < 17) |>
+  ggplot(aes(x = Horizon, y = value, color = model))+ #, shape = model, linetype = model
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
+  facet_wrap(~site_id)+
   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
-  ggtitle("SD")+
+  # ggtitle("RMSE")+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+    # guides(color = "none")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
-ggpubr::ggarrange(rmsefig, sdfig, nrow = 1)
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_allmodel_allyear.jpg",
+       rmsefig_allyear_allmodel, device = "jpg", width = 250, height = 150, units = "mm")
+
+#sd
+# sdfig <- AR_clim_nnetar_persist_outputs_observed  |> 
+#   filter(reference_datetime >= ymd("2023-02-01")) |>  
+#   group_by(Horizon, site_id) |> 
+#   summarise(sd_AR = mean(sigma_AR, na.rm = T),
+#             sd_clim = mean(sigma_clim, na.rm = T),
+#             sd_NNETAR = mean(sigma_NNETAR, na.rm = T),
+#             sd_persist = mean(sigma_persist, na.rm = T)) |> 
+#   pivot_longer(-c(1:2)) |> 
+#   filter(Horizon > 0,
+#          Horizon < 17) |> 
+#   ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
+#   geom_line(linewidth = 1.2)+
+#   geom_point(size = 3)+
+#   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+#   ggtitle("SD")+
+#   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+# 
+# ggpubr::ggarrange(rmsefig, sdfig, nrow = 1)
 
 ### fDOM TS plots 
 
@@ -1309,31 +1337,9 @@ fcr_bvr_fdom_observed |>
 
 ### trying rmse for seasons (strat (July, aug, sep) and non-strat (nov, dec, jan))
    
-## seasons as the facets 
-AR_clim_nnetar_persist_outputs_observed |> 
-  filter(reference_datetime >= ymd("2023-02-01")) |> 
-  filter(Horizon > 0,
-         Horizon < 17) |> 
-  mutate(Month = month(as.Date(datetime))) |> 
-  filter(Month %in% c(7,8,9, 11,12,1)) |> 
-   mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
-  group_by(Horizon, site_id, Season) |> 
-  summarise(rmse_AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
-            rmse_clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-             rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
-  pivot_longer(-c(1:3)) |> 
-  ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
-  geom_line(linewidth = 1.2)+
-  geom_point(size = 3)+
-  facet_wrap(~Season, nrow = 1, scales = "fixed")+
-  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
-  ggtitle("RMSE")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
-
-
 #reservoir as the facets
-AR_clim_nnetar_persist_outputs_observed |> 
+
+rmse_season_full <- AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
   filter(Horizon > 0,
          Horizon < 17) |> 
@@ -1342,21 +1348,55 @@ AR_clim_nnetar_persist_outputs_observed |>
    mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
   group_by(Horizon, site_id, Season) |> 
   summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
-            Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            # Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            # NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
             Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:3)) |> 
   rename(model = name) |> 
-  ggplot(aes(x = Horizon, y = value, color = Season, shape = model, linetype = model))+
+  ggplot(aes(x = Horizon, y = value, color = model, shape = Season))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
   facet_wrap(~site_id, nrow = 1, scales = "fixed")+
   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
   #ggtitle("RMSE")+
   labs(x = "Horizon", y = "RMSE (QSU)")+
+    ylim(0,3.2)+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
-   scale_color_manual(values = c("Winter" = "gray", "Summer"= "green4"))  #"skyblue3"
+   scale_color_manual(values = c("AR" = "#F8766D", "Persist"= "#F564E3"))  # NNETAR = #00BFC4 , Clim = #00BA38
 
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_sseasons_ar_persist.jpg",
+       rmse_season_full, device = "jpg", width = 250, height = 150, units = "mm")
+
+
+rmse_season_summer <- AR_clim_nnetar_persist_outputs_observed |> 
+  filter(reference_datetime >= ymd("2023-02-01")) |> 
+  filter(Horizon > 0,
+         Horizon < 17) |> 
+  mutate(Month = month(as.Date(datetime))) |> 
+  filter(Month %in% c(7,8,9)) |> 
+   mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
+  group_by(Horizon, site_id, Season) |> 
+  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
+            # Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            # NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  pivot_longer(-c(1:3)) |> 
+  rename(model = name) |> 
+  ggplot(aes(x = Horizon, y = value, color = model, shape = Season))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  facet_wrap(~site_id, nrow = 1, scales = "fixed")+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  #ggtitle("RMSE")+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  ylim(0,3.2)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
+   scale_color_manual(values = c("AR" = "#F8766D", "Persist"= "#F564E3"))  # NNETAR = #00BFC4 , Clim = #00BA38
+
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_ssummer_ar_persist.jpg",
+       rmse_season_summer, device = "jpg", width = 250, height = 150, units = "mm")
 
   
 
