@@ -1247,20 +1247,26 @@ AR_clim_nnetar_persist_outputs_observed <- left_join(AR_clim_nnetar_persist_outp
 ### PLOTS 
 
 #rmse
-rmsefig <- AR_clim_nnetar_persist_outputs_observed |> 
+#rmsefig <- 
+  AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
   group_by(Horizon, site_id) |> 
-  summarise(rmse_AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
-            rmse_clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            rmse_NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-             rmse_persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:2)) |>
+  rename(model = name) |> 
   filter(Horizon > 0,
          Horizon < 17) |>
-  ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
+  ggplot(aes(x = Horizon, y = value, color = site_id, shape = model, linetype = model))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
-  ggtitle("RMSE")+
+  facet_wrap(~site_id)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  # ggtitle("RMSE")+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+    guides(color = "none")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
 #sd
@@ -1277,6 +1283,7 @@ sdfig <- AR_clim_nnetar_persist_outputs_observed  |>
   ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
   ggtitle("SD")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
@@ -1302,6 +1309,7 @@ fcr_bvr_fdom_observed |>
 
 ### trying rmse for seasons (strat (July, aug, sep) and non-strat (nov, dec, jan))
    
+## seasons as the facets 
 AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
   filter(Horizon > 0,
@@ -1324,10 +1332,36 @@ AR_clim_nnetar_persist_outputs_observed |>
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
 
 
-  
+#reservoir as the facets
+AR_clim_nnetar_persist_outputs_observed |> 
+  filter(reference_datetime >= ymd("2023-02-01")) |> 
+  filter(Horizon > 0,
+         Horizon < 17) |> 
+  mutate(Month = month(as.Date(datetime))) |> 
+  filter(Month %in% c(7,8,9, 11,12,1)) |> 
+   mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
+  group_by(Horizon, site_id, Season) |> 
+  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
+            Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  pivot_longer(-c(1:3)) |> 
+  rename(model = name) |> 
+  ggplot(aes(x = Horizon, y = value, color = Season, shape = model, linetype = model))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  facet_wrap(~site_id, nrow = 1, scales = "fixed")+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  #ggtitle("RMSE")+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
+   scale_color_manual(values = c("Winter" = "gray", "Summer"= "green4"))  #"skyblue3"
+
+
   
 
 ```
+
 
 ##make example forecast plots
 
@@ -1476,6 +1510,67 @@ all_ex <- combined_for_plots |>
 ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_ex.jpg",
        all_ex, device = "jpg", width = 250, height = 150, units = "mm")
   
+
+```
+
+
+
+
+## trying TS w/ ribbon as 1 day forecasts 
+
+```{r}
+head(combined_for_plots)
+
+combined_for_plots |> 
+  filter(model_id == "AR",
+         Horizon == 1,
+         site_id == 'fcre') |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+combined_for_plots |> 
+  filter(model_id == "AR",
+         Horizon == 7,
+         site_id == 'fcre') |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+combined_for_plots |> 
+  filter(model_id == "AR",
+         Horizon == 16,
+         site_id == 'fcre') |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+
+combined_for_plots |> 
+  filter(reference_datetime >= ymd("2023-02-01")) |> 
+  filter(model_id == "AR",
+         Horizon %in% c(1,8,16),
+         site_id == 'fcre') |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_wrap(~factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead")), ncol = 1, scales = "free_y")+
+  scale_x_date(date_breaks = "2 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  
+  
+
 
 ```
 
