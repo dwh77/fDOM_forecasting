@@ -1325,19 +1325,28 @@ ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/D
 
 ### fDOM TS plots 
 
-AR_clim_nnetar_persist_outputs_observed |> 
+fdom_dec22_jan24 <- AR_clim_nnetar_persist_outputs_observed |> 
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot(aes(x = datetime, y = observation, color = site_id))+
   geom_point()+
-  ggtitle("Dec 22 - Jan 24")+
+  # ggtitle("Dec 22 - Jan 24")+
   labs(x = element_blank(), y = "fDOM (QSU)", color = "Reservoir")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
 
-fcr_bvr_fdom_observed |> 
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fdom_obs_dec22_jan24.jpg",
+       fdom_dec22_jan24, device = "jpg", width = 250, height = 150, units = "mm")
+
+
+fdom_alltime <- fcr_bvr_fdom_observed |> 
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot(aes(x = datetime, y = observation, color = site_id))+
   geom_point()+
-  ggtitle("FCR and BVR")+
+  #ggtitle("FCR and BVR")+
   labs(x = element_blank(), y = "fDOM (QSU)", color = "Reservoir")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/fdom_obs_alltime.jpg",
+       fdom_alltime, device = "jpg", width = 250, height = 150, units = "mm")
   
 
 
