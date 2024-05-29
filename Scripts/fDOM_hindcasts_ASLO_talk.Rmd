@@ -1250,15 +1250,16 @@ AR_clim_nnetar_persist_outputs_observed <- left_join(AR_clim_nnetar_persist_outp
 rmsefig_allyear_AR <- AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
   group_by(Horizon, site_id) |> 
-  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
-            Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            ML = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  summarise(Autoregressive = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            Climatology = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persistence = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:2)) |>
   rename(model = name) |> 
-  filter(model == "AR",
+  filter(model == "Autoregressive",
          Horizon > 0,
          Horizon < 17) |>
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot(aes(x = Horizon, y = value, color = model))+ #, shape = model, linetype = model
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
@@ -1267,23 +1268,26 @@ rmsefig_allyear_AR <- AR_clim_nnetar_persist_outputs_observed |>
   # ggtitle("RMSE")+
   labs(x = "Horizon", y = "RMSE (QSU)")+
     # guides(color = "none")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+    scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_ar_allyear.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_ar_allyear_V2.jpg",
        rmsefig_allyear_AR, device = "jpg", width = 250, height = 150, units = "mm")
 
 
 rmsefig_allyear_allmodel <- AR_clim_nnetar_persist_outputs_observed |> 
   filter(reference_datetime >= ymd("2023-02-01")) |> 
   group_by(Horizon, site_id) |> 
-  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
-            Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
-            ML = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  summarise(Autoregressive = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            Climatology = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persistence = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:2)) |>
   rename(model = name) |> 
   filter(Horizon > 0,
          Horizon < 17) |>
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot(aes(x = Horizon, y = value, color = model))+ #, shape = model, linetype = model
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
@@ -1292,9 +1296,11 @@ rmsefig_allyear_allmodel <- AR_clim_nnetar_persist_outputs_observed |>
   # ggtitle("RMSE")+
   labs(x = "Horizon", y = "RMSE (QSU)")+
     # guides(color = "none")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+    scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_allmodel_allyear.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_allmodel_allyear_V2.jpg",
        rmsefig_allyear_allmodel, device = "jpg", width = 250, height = 150, units = "mm")
 
 #sd
@@ -1347,13 +1353,14 @@ rmse_season_full <- AR_clim_nnetar_persist_outputs_observed |>
   filter(Month %in% c(7,8,9, 11,12,1)) |> 
    mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
   group_by(Horizon, site_id, Season) |> 
-  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
-            # Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+  summarise(Autoregressive = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            # Climatology = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
             # NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+            Persistence = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:3)) |> 
   rename(model = name) |> 
-  ggplot(aes(x = Horizon, y = value, color = model, shape = Season))+
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
+  ggplot(aes(x = Horizon, y = value, color = model, shape = Season, linetype = Season))+ # 
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
   facet_wrap(~site_id, nrow = 1, scales = "fixed")+
@@ -1361,11 +1368,13 @@ rmse_season_full <- AR_clim_nnetar_persist_outputs_observed |>
   #ggtitle("RMSE")+
   labs(x = "Horizon", y = "RMSE (QSU)")+
     ylim(0,3.2)+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
-   scale_color_manual(values = c("AR" = "#F8766D", "Persist"= "#F564E3"))  # NNETAR = #00BFC4 , Clim = #00BA38
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Persistence" = "#56B4E9"))
+
+#Default ggpot colors "Autoregressive" = "#F8766D", "Persistence"= "#F564E3" NNETAR = #00BFC4 , Clim = #00BA38
 
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_sseasons_ar_persist.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_sseasons_ar_persist_v2.jpg",
        rmse_season_full, device = "jpg", width = 250, height = 150, units = "mm")
 
 
@@ -1377,13 +1386,14 @@ rmse_season_summer <- AR_clim_nnetar_persist_outputs_observed |>
   filter(Month %in% c(7,8,9)) |> 
    mutate(Season = ifelse(Month %in% c(7,8,9), "Summer", "Winter")) |> 
   group_by(Horizon, site_id, Season) |> 
-  summarise(AR = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2), 
-            # Clim = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+  summarise(Autoregressive = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            # Climatology = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
             # NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
-            Persist = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+            Persistence = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
   pivot_longer(-c(1:3)) |> 
   rename(model = name) |> 
-  ggplot(aes(x = Horizon, y = value, color = model, shape = Season))+
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
+  ggplot(aes(x = Horizon, y = value, color = model, shape = Season, linetype = Season))+ # 
   geom_line(linewidth = 1.2)+
   geom_point(size = 3)+
   facet_wrap(~site_id, nrow = 1, scales = "fixed")+
@@ -1391,11 +1401,11 @@ rmse_season_summer <- AR_clim_nnetar_persist_outputs_observed |>
   #ggtitle("RMSE")+
   labs(x = "Horizon", y = "RMSE (QSU)")+
   ylim(0,3.2)+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
-   scale_color_manual(values = c("AR" = "#F8766D", "Persist"= "#F564E3"))  # NNETAR = #00BFC4 , Clim = #00BA38
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Persistence" = "#56B4E9"))
 
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_ssummer_ar_persist.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/rmse_ssummer_ar_persist_V2.jpg",
        rmse_season_summer, device = "jpg", width = 250, height = 150, units = "mm")
 
   
@@ -1530,15 +1540,16 @@ pre_forecast_fig <- example_forecast_data |>
   filter(model_id == "AR") |> 
   rbind(weekbefore) |> 
   mutate(observation = ifelse(datetime > ymd("2023-07-15"), NA, observation)) |> 
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot()+
   geom_point(aes(datetime, observation, fill = model_id)) +
   facet_wrap(~site_id, scales = "fixed") +
-  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
   ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/pre_4cast_fig.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/pre_4cast_fig_V2.jpg",
        pre_forecast_fig, device = "jpg", width = 250, height = 150, units = "mm")
 
 ### pre observations and AR forecast
@@ -1547,54 +1558,78 @@ ar_forecast_fig <- example_forecast_data |>
   filter(model_id == "AR") |> 
   rbind(weekbefore) |> 
   mutate(observation = ifelse(datetime > ymd("2023-07-15"), NA, observation)) |> 
+    mutate(model_id_full = ifelse(model_id == "AR", "Autoregressive", model_id_full)) |> 
+    mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot()+
   geom_point(aes(datetime, observation)) +
   geom_vline(aes(xintercept = as.POSIXct("2023-07-15")))+
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id_full), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, col = model_id_full))+
   facet_wrap(~site_id, scales = "fixed") +
-  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
   ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("Autoregressive" = "#CC79A7"))+
+  scale_fill_manual(values = c("Autoregressive" = "#CC79A7"))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/ar_4cast_fig.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/ar_4cast_fig_V2.jpg",
        ar_forecast_fig, device = "jpg", width = 250, height = 150, units = "mm")
 
 ## pre observations and all forecasts
 all_forecast_fig <- example_forecast_data |> 
   rbind(weekbefore) |> 
   mutate(observation = ifelse(datetime > ymd("2023-07-15"), NA, observation)) |> 
+  mutate(model_id_full = ifelse(model_id == "clim", "Climatology", NA),
+         model_id_full = ifelse(model_id == "AR", "Autoregressive", model_id_full),
+         model_id_full = ifelse(model_id == "persist", "Persistence", model_id_full),
+         model_id_full = ifelse(model_id == "ML", "NNETAR", model_id_full)) |> 
+    mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot()+
   geom_point(aes(datetime, observation)) +
   geom_vline(aes(xintercept = as.POSIXct("2023-07-15")))+
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id_full), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, color = model_id_full))+
   facet_wrap(~site_id, scales = "fixed") +
-  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
   ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))+
+  scale_fill_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_4cast_fig.jpg",
+
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_4cast_fig_V2.jpg",
        all_forecast_fig, device = "jpg", width = 250, height = 150, units = "mm")
 
 
 ## all observations and  forecasts
 all_forecast_fig_withobs <- example_forecast_data |> 
   rbind(weekbefore) |> 
+  mutate(model_id_full = ifelse(model_id == "clim", "Climatology", NA),
+         model_id_full = ifelse(model_id == "AR", "Autoregressive", model_id_full),
+         model_id_full = ifelse(model_id == "persist", "Persistence", model_id_full),
+         model_id_full = ifelse(model_id == "ML", "NNETAR", model_id_full)) |>
+    mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
   ggplot()+
   geom_point(aes(datetime, observation)) +
   geom_vline(aes(xintercept = as.POSIXct("2023-07-15")))+
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id_full), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, col = model_id_full))+
   facet_wrap(~site_id, scales = "fixed") +
-  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
   ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))+
+  scale_fill_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))
 
-ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_4cast_fig_withobs.jpg",
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/all_4cast_fig_withobs_V2.jpg",
        all_forecast_fig_withobs, device = "jpg", width = 250, height = 150, units = "mm")
 
 
