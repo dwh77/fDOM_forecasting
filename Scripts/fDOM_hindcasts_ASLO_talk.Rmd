@@ -1304,23 +1304,34 @@ ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/D
        rmsefig_allyear_allmodel, device = "jpg", width = 250, height = 150, units = "mm")
 
 #sd
-# sdfig <- AR_clim_nnetar_persist_outputs_observed  |> 
-#   filter(reference_datetime >= ymd("2023-02-01")) |>  
-#   group_by(Horizon, site_id) |> 
-#   summarise(sd_AR = mean(sigma_AR, na.rm = T),
-#             sd_clim = mean(sigma_clim, na.rm = T),
-#             sd_NNETAR = mean(sigma_NNETAR, na.rm = T),
-#             sd_persist = mean(sigma_persist, na.rm = T)) |> 
-#   pivot_longer(-c(1:2)) |> 
-#   filter(Horizon > 0,
-#          Horizon < 17) |> 
-#   ggplot(aes(x = Horizon, y = value, color = site_id, shape = name, linetype = name))+
-#   geom_line(linewidth = 1.2)+
-#   geom_point(size = 3)+
-#   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
-#   ggtitle("SD")+
-#   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
-# 
+sd_fig <- AR_clim_nnetar_persist_outputs_observed  |>
+  filter(reference_datetime >= ymd("2023-02-01")) |>
+  group_by(Horizon, site_id) |>
+  summarise(Autoregressive = mean(sigma_AR, na.rm = T),
+            Climatology = mean(sigma_clim, na.rm = T),
+            NNETAR = mean(sigma_NNETAR, na.rm = T),
+            Persistence = mean(sigma_persist, na.rm = T)) |>
+  pivot_longer(-c(1:2)) |>
+    rename(model = name) |> 
+  filter(Horizon > 0,
+         Horizon < 17) |>
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam Reservoir (BVR)", "Falling Creek Reservoir (FCR)")) |> 
+  ggplot(aes(x = Horizon, y = value, color = model))+
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  facet_wrap(~site_id)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  #ggtitle("SD")+
+  labs(x = "Horizon", y = "SD (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+    scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))
+
+ggsave(filename = "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/SD_allmodels.jpg",
+       sd_fig, device = "jpg", width = 250, height = 150, units = "mm")
+
+
+
 # ggpubr::ggarrange(rmsefig, sdfig, nrow = 1)
 
 ### fDOM TS plots 
