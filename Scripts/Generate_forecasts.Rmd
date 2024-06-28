@@ -1,0 +1,196 @@
+---
+title: "fDOM_forecast_generation"
+author: "Dexter Howard"
+date: "2024-06-28"
+output: html_document
+---
+
+
+## Load packages and functions 
+
+```{r}
+library(tidyverse)
+
+source('./Scripts/Functions/Forecast_helper_functions.R')
+
+source('./Scripts/Functions/AR_4cast_function.R')
+source('./Scripts/Functions/Climatology_4cast_function.R')
+source('./Scripts/Functions/NNETAR_4cast_function.R')
+source('./Scripts/Functions/Persistence_4cast_function.R')
+
+```
+
+
+## Get data 
+
+target data 
+```{r}
+### S3 links 
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+# water Q data
+fcr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+  filter(datetime >= ymd("2022-01-01"),
+         datetime < ymd("2024-04-01"),
+         site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean"))
+
+
+bvr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+  filter(datetime >= ymd("2022-01-01"),
+         datetime < ymd("2024-04-01"),
+         site_id == "bvre",
+         depth_m == 1.5,
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean"))
+
+
+```
+
+
+NOAA forecasts 
+```{r}
+## FCR and BVR 
+fcr_bvr_noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv")
+
+## CCR
+ccr_noaa_daily <- read.csv("../Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-27jun24.csv")
+
+```
+
+
+Water Temp forecasts 
+```{r}
+## FCR 
+fcr_flare <- read.csv("../Data/GeneratedData/FCR_FLARE_7nov22-18feb24.csv")
+
+fcr_flare <- fcr_flare |> 
+  rename(datetime_date = datetime) |> 
+  filter(parameter <= 31) |> 
+  filter(as.Date(reference_datetime) > ymd("2022-11-07") ) #remove odd date that has dates one month behind reference datetime
+
+##BVR
+bvr_flare <- read.csv("../Data/GeneratedData/BVR_FLARE_7nov22-18feb24.csv")
+
+bvr_flare <- bvr_flare |> 
+  rename(datetime_date = datetime) |> 
+  filter(parameter <= 31) |> 
+  filter(as.Date(reference_datetime) > ymd("2022-11-07") ) #remove odd date that has dates one month behind reference datetime
+
+##CCR 
+ccr_flare <- read.csv("../Data/GeneratedData/CCR_FLARE_1jan23-18feb24.csv")
+
+```
+
+
+## Run AR forecasts 
+
+FCR
+```{r}
+## set up dates for for loop
+#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
+forecast_date <- seq(ymd("2023-02-20"), ymd("2024-01-31"), by = "day")
+
+##set up inputs to function
+# forecast_date <- ymd("2023-04-24")
+model_id <- "example_fDOM_AR_dwh"
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+var <- "fDOM_QSU_mean"
+site <- "fcre"
+forecast_depths <- 1.6
+project_id <- "vera4cast"
+calibration_start_date <- ymd("2022-11-11")
+
+water_temp_4cast_data <- fcr_flare
+noaa_4cast <- noaa_daily
+
+n_members <- 31
+forecast_horizon <- 16
+output_folder <- "fcre_run6may24"
+
+
+for (j in 1:length(forecast_date)) {
+  
+  print(forecast_date[j]) 
+  # fdom_forecast_full_uncert(variable, forecast_start_date[j], 
+  #             n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df,
+  #             output_folder = "a")
+  
+generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
+                       output_folder = output_folder, calibration_start_date = calibration_start_date,
+                       model_id = model_id, targets_url = targets_url,
+                       water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
+                      site = site, forecast_depths = forecast_depths, project_id = project_id)
+
+
+}
+
+# Days loop broke: 5dec22, 19feb23,
+# Days with NA generated warning: 13dec22-16dec22, 30dec22 - 1jan23, 5aug23 - 8aug23
+
+```
+
+
+BVR
+```{r}
+## set up dates for for loop
+#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
+forecast_date <- seq(ymd("2023-02-20"), ymd("2024-01-31"), by = "day")
+
+##set up inputs to function
+model_id <- "example_fDOM_AR_dwh"
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+var <- "fDOM_QSU_mean"
+site <- "bvre"
+forecast_depths <- 1.5
+project_id <- "bvr_fdom_hindcast"
+calibration_start_date <- ymd("2022-11-11")
+
+water_temp_4cast_data <- bvr_flare
+noaa_4cast <- noaa_daily
+
+n_members <- 31
+forecast_horizon <- 16
+output_folder <- "bvre_run6may24"
+
+
+for (j in 1:length(forecast_date)) {
+  
+  print(forecast_date[j]) 
+  # fdom_forecast_full_uncert(variable, forecast_start_date[j], 
+  #             n_members, forecast_horizon, fdom_IC_df, noaa_df, flare_df,
+  #             output_folder = "a")
+  
+generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
+                       output_folder = output_folder, calibration_start_date = calibration_start_date,
+                       model_id = model_id, targets_url = targets_url,
+                       water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
+                      site = site, forecast_depths = forecast_depths, project_id = project_id)
+
+
+}
+
+# Days loop broke: 19feb23
+# Days with NA generated warning: 8jun23 - 13jun23 
+
+```
+
+
+
+
+
+## Run Climatology forecasts 
+
+FCR
+
+```{r}
+
+```
+
+
+
+
+
+
+
+

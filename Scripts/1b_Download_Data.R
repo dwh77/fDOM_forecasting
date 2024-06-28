@@ -114,13 +114,3 @@ write.csv(ccr_df_flare_old, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_for
 
 
 
-
-
-
-
-
-
-
-
-
-
