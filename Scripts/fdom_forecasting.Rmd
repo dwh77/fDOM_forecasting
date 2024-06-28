@@ -141,6 +141,43 @@ bvr_df_flare_old <- arrow::open_dataset(bvr_backup_forecasts) |>
 
 arrow::open_dataset(backup_forecasts)
 
+
+### ccr trial 
+#water temp
+ccr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=ccre/"),
+                                          endpoint_override = 'renc.osn.xsede.org',
+                                          anonymous = TRUE)
+
+ccr_df_flare_old <- arrow::open_dataset(ccr_backup_forecasts) |>
+     filter(depth %in% c(1.5,1.6), 
+            variable == "temperature",
+            parameter <= 2
+     ) |>  
+     dplyr::collect()
+
+#noaa
+noaa_df <- arrow::open_dataset(arrow::s3_bucket('bio230121-bucket01/flare/drivers/met/gefs-v12', endpoint_override = 'renc.osn.xsede.org', anonymous = TRUE)) |> 
+  # dplyr::filter(lubridate::as_datetime(reference_datetime) > lubridate::as_datetime('2024-06-24')) |> 
+  dplyr::collect()
+
+scores_df <- arrow::open_dataset(arrow::s3_bucket('bio230121-bucket01/flare/scores/parquet', endpoint_override = 'renc.osn.xsede.org', anonymous = TRUE)) |> 
+  dplyr::filter(lubridate::as_datetime(reference_datetime) > lubridate::as_datetime('2024-06-24')) |> 
+  dplyr::collect()
+
+
+
+noaa_df <- (arrow::s3_bucket('bio230121-bucket01/flare/drivers/met/gefs-v12/stage2', endpoint_override = 'renc.osn.xsede.org', anonymous = TRUE))
+
+arrow::open_dataset(noaa_df)
+noaa_df$ls()
+
+noaa_df_ccr <-  arrow::open_dataset(noaa_df) |>
+  filter(site_id == "ccre",
+         ) |>  
+  dplyr::collect()
+
+head(noaa_df_ccr)
+
 ```
 
 
