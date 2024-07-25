@@ -32,7 +32,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
                                    model_id,
                                    targets_url, # where are the targets you are forecasting?
                                    water_temp_4cast_old_url,
-                                   water_temp_4cast_new_url,
+                                   #water_temp_4cast_new_url = 'focal',
                                    noaa_4cast_url,
                                    var, # what variable(s)?
                                    site, # what site(s),
@@ -124,45 +124,52 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
   
   
   ## current water temp 
+  
+if (site == 'fcre'){
+  
+water_temp_4cast_new_url <- "s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org"
+  
 new_flare_forecasts <- arrow::open_dataset(water_temp_4cast_new_url)
   
   df_flare_new <- new_flare_forecasts |>
-    dplyr::filter(#variable %in% c("Temp_C_mean"),
-      #datetime >= ymd_hms("2023-12-31 00:00:00"),
-      site_id %in% c("fcre", "bvre"),
-      depth_m == 1.5) |>
+    dplyr::filter(site_id %in% c("fcre"),
+                  model_id == "glm_aed_v1",
+                  depth_m == 1.5) |>
+    dplyr::rename(depth = depth_m) |> 
     dplyr::collect()
   
-  if (site == 'fcre') {
-    df_flare_new_forbind <- df_flare_new |> 
-      filter(model_id == "glm_aed_v1") |> 
-      filter(reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
-      select(-reference_date, -pub_datetime) |> 
-      mutate(variable = "temperature",
-             reference_datetime = as.character(reference_datetime)) |> 
-      rename(datetime_date = datetime,
-             depth = depth_m) |> 
-      select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
-    
-    }
+}
+  
   
   if (site == 'bvre') {
-    df_flare_new_forbind <- df_flare_new |> 
-      filter(model_id == "default") |> 
-      filter(reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
-      select(-reference_date, -pub_datetime) |> 
-      mutate(variable = "temperature",
-             reference_datetime = as.character(reference_datetime)) |> 
-      rename(datetime_date = datetime,
-             depth = depth_m) |> 
-      select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+    bvre_reforecast <- arrow::s3_bucket(file.path("bio230121-bucket01/flare/forecasts/parquet/"),
+                                        endpoint_override = 'renc.osn.xsede.org',
+                                        anonymous = TRUE)
+    
+    df_flare_new_bvre <- arrow::open_dataset(bvre_reforecast) |> 
+      filter(site_id == 'bvre', 
+             model_id == 'glm_flare_v1',
+             variable == 'temperature',
+             depth == 1.5) |> 
+      collect()
     
   }
+  
+  
+df_flare_new_forbind <- df_flare_new |> 
+      filter(reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
+      select(-reference_date) |> 
+      mutate(variable = "temperature",
+             reference_datetime = as.character(reference_datetime)) |> 
+      rename(datetime_date = datetime) |> 
+      mutate(parameter = as.numeric(parameter)) |> 
+      select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+    
+
   
 ## bind water temp forecasts together 
   
 water_temp_4cast_data <- rbind(df_flare_old_forbind, df_flare_new_forbind) |>
-  mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31)
   
 
@@ -344,7 +351,11 @@ water_temp_4cast_data <- rbind(df_flare_old_forbind, df_flare_new_forbind) |>
 ########### Test function #######
 
 #### set function inputs
+## CHANGE FIRST TWO
 forecast_date <- ymd("2024-07-01")
+site <- "bvre"
+forecast_depths <- 'focal'
+
 forecast_horizon <- 16
 n_members <- 31
 calibration_start_date <- ymd("2022-11-11")
@@ -353,16 +364,14 @@ targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/
 
 water_temp_4cast_old_url <- "bio230121-bucket01/vt_backup/forecasts/parquet/"
 
-water_temp_4cast_new_url <- "s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org"
+#water_temp_4cast_new_url <- 'focal' 
 
 noaa_4cast_url <- "bio230121-bucket01/flare/drivers/met/gefs-v12/stage2"
 
 var <- "fDOM_QSU_mean"
-site <- "fcre"
-forecast_depths <- 1.6
 project_id <- "vera4cast"
 
-output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_date, ".csv")
+output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", site, "_", forecast_date, ".csv")
 
 
 
@@ -371,13 +380,13 @@ output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_dat
 generate_fDOM_forecast(forecast_date = forecast_date, forecast_horizon = forecast_horizon, n_members = n_members,
                        output_folder = output_folder, model_id = model_id, targets_url = targets_url,
                        water_temp_4cast_old_url = water_temp_4cast_old_url,
-                       water_temp_4cast_new_url = water_temp_4cast_new_url,
+                       # water_temp_4cast_new_url = water_temp_4cast_new_url,
                        noaa_4cast_url = noaa_4cast_url, var = var,
                       site = site, forecast_depths = forecast_depths, project_id = project_id, 
                       calibration_start_date = calibration_start_date )
 
 
-read.csv("C:/Users/dwh18/Downloads/example_fDOM_AR_dwh_2024-07-01.csv")|>
+read.csv("C:/Users/dwh18/Downloads/fDOM_AR_dwh_fcre_2024-07-01.csv")|>
   mutate(date = as.Date(datetime)) |>
     # filter(forecast_date > ymd("2023-01-03")) |>
   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
