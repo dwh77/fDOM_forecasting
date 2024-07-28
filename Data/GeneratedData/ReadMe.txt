@@ -1,0 +1,1 @@
+Folder to hold generated data from s3 buckets that are to large and time consuming to rerun each hindcast iteration
