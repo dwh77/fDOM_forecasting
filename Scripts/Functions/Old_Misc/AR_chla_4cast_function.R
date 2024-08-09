@@ -52,7 +52,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
   # Get targets
   message('Getting targets')
   targets <- readr::read_csv(targets_url, show_col_types = F) |>
-    filter(variable %in% var,
+    filter(variable %in% c(var, "Chla_ugL_mean"), 
            site_id %in% site,
            depth_m %in% forecast_depths,
            datetime <= forecast_date)
@@ -120,10 +120,11 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
     left_join(historic_weather) |>
     left_join(historic_watertemp) |>
     mutate(fDOM_lag1 = lag(fDOM_QSU_mean, 1),
+           Chla_lag1 = lag(Chla_ugL_mean, 1),
            precip_lag1 = lag(precipitation_flux, 1))
   
   fdom_model <- lm(fit_df$fDOM_QSU_mean ~ fit_df$fDOM_lag1 + fit_df$surface_downwelling_shortwave_flux_in_air +
-                     fit_df$precipitation_flux + fit_df$precip_lag1 + fit_df$temperature)
+                     fit_df$precipitation_flux + fit_df$precip_lag1 + fit_df$temperature + fit_df$Chla_lag1)
   
   model_fit <- summary(fdom_model)
   
@@ -137,7 +138,8 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
                          beta_SW = rnorm(31, coeffs[3], params_se[3]),
                          beta_rain = rnorm(31, coeffs[4], params_se[4]),
                          beta_rainLag = rnorm(31, coeffs[5], params_se[5]),
-                         beta_temp = rnorm(31, coeffs[6], params_se[6])
+                         beta_temp = rnorm(31, coeffs[6], params_se[6]),
+                         beta_chla = rnorm(31, coeffs[7], params_se[7])
   )
   
   
@@ -226,10 +228,16 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
     fdom_lag <- forecast_full_unc %>%
       filter(date == forecasted_dates[i-1])
     
+    #pull lagged chla values
+    chla_lag <- targets |>
+      filter(variable == "Chla_ugL_mean") |> 
+      filter(ymd(datetime) == forecasted_dates[i-1]) 
+    
     #run model
     fdom_pred$value <- param_df$beta_int + (fdom_lag$value * param_df$beta_fdomLag)  +
       (met_sw_driv$prediction * param_df$beta_SW) + (met_precip_driv$prediction * param_df$beta_rain) + 
       (met_precip_lag_driv$prediction * param_df$beta_rainLag) + (flare_driv$prediction * param_df$beta_temp) +
+      (chla_lag$value * param_df$beta_chla) + ##################BREAKS SINCE LAG IS ONLY GOOD FOR 1st FORECAST DAY
       rnorm(n = 31, mean = 0, sd = sigma) #process uncert
     
     #insert values back into the forecast dataframe
@@ -264,38 +272,38 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 
 
 ########### TEst function #######
-# forecast_date <- ymd("2023-04-24")
-# model_id <- "example_fDOM_AR_dwh"
-# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
-# var <- "fDOM_QSU_mean"
-# site <- "fcre"
-# forecast_depths <- 1.6
-# project_id <- "vera4cast"
-# calibration_start_date <- ymd("2022-11-11")
-# 
-# water_temp_4cast_data <- fcr_flare
-# noaa_4cast <- noaa_daily
-# 
-# n_members <- 31
-# forecast_horizon <- 16
-# # output_folder <- "z"
-# output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_date, ".csv")
-# 
-# 
-# 
-# ##run function
-# generate_fDOM_forecast(forecast_date = forecast_date, forecast_horizon = forecast_horizon, n_members = n_members,
-#                        output_folder = output_folder, model_id = model_id, targets_url = targets_url,
-#                        water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
-#                       site = site, forecast_depths = forecast_depths, project_id = project_id, 
-#                       calibration_start_date = calibration_start_date )
-# 
-# 
-# read.csv("C:/Users/dwh18/Downloads/example_fDOM_AR_dwh_2023-04-24.csv")|>
-#   mutate(date = as.Date(datetime)) |>
-#     # filter(forecast_date > ymd("2023-01-03")) |>
-#   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
-#   geom_line()
+forecast_date <- ymd("2023-04-24")
+model_id <- "example_fDOM_AR_dwh"
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+var <- "fDOM_QSU_mean"
+site <- "fcre"
+forecast_depths <- 1.6
+project_id <- "vera4cast"
+calibration_start_date <- ymd("2022-11-11")
+
+water_temp_4cast_data <- fcr_flare
+noaa_4cast <- noaa_daily
+
+n_members <- 31
+forecast_horizon <- 16
+# output_folder <- "z"
+output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_date, ".csv")
+
+
+
+##run function
+generate_fDOM_forecast(forecast_date = forecast_date, forecast_horizon = forecast_horizon, n_members = n_members,
+                       output_folder = output_folder, model_id = model_id, targets_url = targets_url,
+                       water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
+                      site = site, forecast_depths = forecast_depths, project_id = project_id,
+                      calibration_start_date = calibration_start_date )
+
+
+read.csv("C:/Users/dwh18/Downloads/example_fDOM_AR_dwh_2023-04-24.csv")|>
+  mutate(date = as.Date(datetime)) |>
+    # filter(forecast_date > ymd("2023-01-03")) |>
+  ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
+  geom_line()
 
 
 
