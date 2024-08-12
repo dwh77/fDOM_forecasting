@@ -4,80 +4,135 @@
 library(tidyverse)
 
 
-#### NOAA weather forecasts for BVR and FCR ####
+#### NOAA weather forecasts for BVR and FCR ------------------------------------------
 
-#Getting NOAA forecasts from 2020-09-25 to 2024-02-18
-old_met_bucket <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/drivers/noaa/gefs-v12-reprocess/stage2/"),
-                                         endpoint_override = 'renc.osn.xsede.org',
-                                         anonymous = TRUE)
+#Getting NOAA forecasts from 2020-09-25 to current day
+new_met_bucket <-arrow::s3_bucket(file.path("bio230121-bucket01/flare/drivers/met/gefs-v12/stage2/"),
+                                  endpoint_override = 'renc.osn.xsede.org',
+                                  anonymous = TRUE)
 
-noaa_old_daily <- arrow::open_dataset(old_met_bucket) |>
+noaa_new_daily <- arrow::open_dataset(new_met_bucket) |>
   dplyr::filter(
-       site_id == 'fcre',  #filtering by bvre returns the same forecasts
-       variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |>
+    site_id == 'fcre',  #filtering by bvre returns the same forecasts
+    variable %in% c("precipitation_flux", "surface_downwelling_shortwave_flux_in_air")) |>
   mutate(datetime_date = as.Date(datetime)) |>
   group_by(reference_datetime, datetime_date, variable, parameter) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
   dplyr::collect()
 
-write.csv(noaa_old_daily, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv", row.names = F)
-
-# noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_25sep20-18feb24.csv")
-# # noaa_dailyz <- noaa_daily |> 
-# #   filter(parameter <= 30)
+write.csv(noaa_new_daily, "Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv", row.names = F)
 
 
-#### FCR and BVR water temp forecasts ####
+#### FCR and BVR water temp forecasts  ------------------------------------------
 
-##This gets water temp forecasts w/ reference datetimes from 2022-10-02 to 2024-02-18
+##This gets water temp forecasts w/ reference datetimes from 2022-10-02 to current 
 
 ##FCR
+
+#old forecasts up to 2024-02-18
 fcr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=fcre/"),
-                                  endpoint_override = 'renc.osn.xsede.org',
-                                  anonymous = TRUE)
+                                     endpoint_override = 'renc.osn.xsede.org',
+                                     anonymous = TRUE)
 
 fcr_df_flare_old <- arrow::open_dataset(fcr_backup_forecasts) |>
   filter(depth %in% c(1.5), #no 1.6
          variable == "temperature",
          parameter <= 31,
          model_id == "test_runS3" #other models for FCR, this is the only one for BVR in backups bucket
-         ) |>
+  ) |>
   dplyr::collect()
 
-write.csv(fcr_df_flare_old, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/FCR_FLARE_7nov22-18feb24.csv", row.names = F)
+fcr_df_flare_old_forbind <- fcr_df_flare_old |> 
+  rename(datetime_date = datetime) |> 
+  mutate(site_id = "fcre") |> 
+  filter(parameter <= 31) |> 
+  filter(as.Date(reference_datetime) > ymd("2022-11-07") ) |>  #remove odd date that has dates one month behind reference datetime
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
 
-# fcr_flare <- read.csv("../Data/GeneratedData/FCR_FLARE_7nov22-18feb24.csv")
-# 
-# fcr_flare <- fcr_flare |> 
-#   rename(datetime_date = datetime) |> 
-#   filter(parameter <= 31) |> 
-#   filter(as.Date(reference_datetime) > ymd("2022-11-07") ) #remove odd date that has dates one month behind reference datetime
+
+## current water temp since 2024-02-18
+fcr_new_flare_forecasts <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org")
+  
+fcr_df_flare_new <- fcr_new_flare_forecasts |>
+    dplyr::filter(site_id %in% c("fcre"),
+                  model_id == "glm_aed_v1",
+                  depth_m == 1.5) |>
+    dplyr::rename(depth = depth_m) |> 
+    dplyr::collect()
+  
+
+fcr_df_flare_new_forbind <- fcr_df_flare_new |> 
+  filter(reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
+  select(-reference_date) |> 
+  mutate(variable = "temperature",
+         reference_datetime = as.character(reference_datetime)) |> 
+  rename(datetime_date = datetime) |> 
+  mutate(parameter = as.numeric(parameter)) |> 
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+
+
+
+## bind water temp forecasts together 
+fcr_water_temp_4cast_data <- rbind(fcr_df_flare_old_forbind, fcr_df_flare_new_forbind) |>
+  filter(parameter <= 31)
+
+write.csv(fcr_water_temp_4cast_data, "Data/GeneratedData/FCR_FLARE_11nov22-12aug24.csv", row.names = F)
 
 
 ## BVR 
+
+#old forecasts up to 2024-02-18
 bvr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=bvre/"),
-                                  endpoint_override = 'renc.osn.xsede.org',
-                                  anonymous = TRUE)
+                                         endpoint_override = 'renc.osn.xsede.org',
+                                         anonymous = TRUE)
 
 bvr_df_flare_old <- arrow::open_dataset(bvr_backup_forecasts) |>
-  filter(depth %in% c(1.5),
+  filter(depth %in% c(1.5), #no 1.6
          variable == "temperature",
-         parameter <= 31
-         ) |>
+         parameter <= 31,
+         model_id == "test_runS3" #other models for FCR, this is the only one for BVR in backups bucket
+  ) |>
   dplyr::collect()
 
-
-write.csv(bvr_df_flare_old, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/BVR_FLARE_7nov22-18feb24.csv", row.names = F)
-
-# bvr_flare <- read.csv("../Data/GeneratedData/BVR_FLARE_7nov22-18feb24.csv")
-# 
-# bvr_flare <- bvr_flare |> 
-#   rename(datetime_date = datetime) |> 
-#   filter(parameter <= 31) |> 
-#   filter(as.Date(reference_datetime) > ymd("2022-11-07") ) #remove odd date that has dates one month behind reference datetime
+bvr_df_flare_old_forbind <- bvr_df_flare_old |> 
+  rename(datetime_date = datetime) |> 
+  mutate(site_id = "bvre") |> 
+  filter(parameter <= 31) |> 
+  filter(as.Date(reference_datetime) > ymd("2022-11-07") ) |>  #remove odd date that has dates one month behind reference datetime
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
 
 
-#### CCR NOAA forecast ####
+## current water temp since 2024-02-18
+bvr_new_flare_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/flare/forecasts/parquet/"),
+                                    endpoint_override = 'renc.osn.xsede.org',
+                                    anonymous = TRUE)
+
+bvr_df_flare_new <- arrow::open_dataset(bvr_new_flare_forecasts) |>
+  dplyr::filter(site_id %in% c("bvre"),
+                model_id == 'glm_flare_v1',
+                variable == 'temperature',
+                depth == 1.5) |>
+  dplyr::collect()
+
+bvr_df_flare_new_forbind <- bvr_df_flare_new |> 
+  filter(reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
+  select(-reference_date) |> 
+  mutate(variable = "temperature",
+         reference_datetime = as.character(reference_datetime)) |> 
+  rename(datetime_date = datetime) |> 
+  mutate(parameter = as.numeric(parameter)) |> 
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+
+
+## bind water temp forecasts together 
+bvr_water_temp_4cast_data <- rbind(bvr_df_flare_old_forbind, bvr_df_flare_new_forbind) |>
+  filter(parameter <= 31)
+
+write.csv(bvr_water_temp_4cast_data, "Data/GeneratedData/BVR_FLARE_11nov22-12aug24.csv", row.names = F)
+
+
+
+#### CCR NOAA forecast ------------------------------------------
 
 noaa_df <- (arrow::s3_bucket('bio230121-bucket01/flare/drivers/met/gefs-v12/stage2', endpoint_override = 'renc.osn.xsede.org', anonymous = TRUE))
 
@@ -89,10 +144,30 @@ noaa_df_ccr <-  arrow::open_dataset(noaa_df) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
   dplyr::collect()
 
-write.csv(noaa_df_ccr, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-27jun24.csv", row.names = F)
+write.csv(noaa_df_ccr, "Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-12aug24.csv", row.names = F)
 
 
-#### CCR water temp forecasts ####
+#### CCR water temp forecasts ------------------------------------------
+
+#reforecasts ADD ran from 2022-11-20 to 2023-01-02; looks like may just be one reference day though
+ccre_reforecast <- arrow::s3_bucket(file.path("bio230121-bucket01/ccre-reforecast/forecasts/parquet/"),
+                                    endpoint_override = 'renc.osn.xsede.org',
+                                    anonymous = TRUE)
+
+ccre_reforecast_df <- arrow::open_dataset(ccre_reforecast) |> 
+  filter(site_id == 'ccre', 
+         model_id == 'glm_flare_reforecast',
+         variable == 'temperature',
+         depth == 1.5) |> 
+  collect()
+
+ccre_reforecast_forbind <- ccre_reforecast_df |> 
+  mutate(datetime_date = as.Date(datetime)) |> 
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+
+
+
+#backup bucket forecasts: 2022-12-01 to 2024-02-18
 ccr_backup_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/vt_backup/forecasts/parquet/site_id=ccre/"),
                                          endpoint_override = 'renc.osn.xsede.org',
                                          anonymous = TRUE)
@@ -104,7 +179,39 @@ ccr_df_flare_old <- arrow::open_dataset(ccr_backup_forecasts) |>
   ) |>  
   dplyr::collect()
 
-write.csv(ccr_df_flare_old, "C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/GeneratedData/CCR_FLARE_1jan23-18feb24.csv", row.names = F)
+ccr_df_flare_old_forbind <- ccr_df_flare_old |> 
+  mutate(datetime_date = as.Date(datetime),
+         site_id = 'ccre') |> 
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+
+
+#newer forecasts to present
+ccr_new_flare_forecasts <- arrow::s3_bucket(file.path("bio230121-bucket01/flare/forecasts/parquet/"),
+                                            endpoint_override = 'renc.osn.xsede.org',
+                                            anonymous = TRUE)
+
+ccr_df_flare_new <- arrow::open_dataset(ccr_new_flare_forecasts) |>
+  dplyr::filter(site_id %in% c("ccre"),
+                model_id == 'glm_flare_v1',
+                variable == 'temperature',
+                depth == 1.5) |>
+  dplyr::collect()
+
+ccr_df_flare_new_forbind <- ccr_df_flare_new |> 
+  filter(reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
+  select(-reference_date) |> 
+  mutate(variable = "temperature",
+         reference_datetime = as.character(reference_datetime)) |> 
+  rename(datetime_date = datetime) |> 
+  mutate(parameter = as.numeric(parameter)) |> 
+  select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id)
+
+
+##bind forecasts together
+ccr_water_temp_4cast_data <- rbind(ccre_reforecast_forbind, ccr_df_flare_old_forbind, ccr_df_flare_new_forbind) |>
+  filter(parameter <= 31)
+
+write.csv(ccr_water_temp_4cast_data, "Data/GeneratedData/CCR_FLARE_1jan23-12aug24.csv", row.names = F)
 
 
 
