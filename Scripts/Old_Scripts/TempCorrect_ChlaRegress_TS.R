@@ -153,13 +153,14 @@ fcrTC |> ggplot(aes(x = Date))+
 p <- -0.015
 
 fcrTC <- fcrTC |> 
-  mutate(fdom_TC = fdom/(1 + (p*(temp - 20)) 
-  )
+  mutate(fdom_TC = fdom/(1 + (p*(temp - 20))   ),
+         fdom_TCundo = fdom*(1 + (p*(temp - 20))   )
   )
 
 fcrTC |> ggplot(aes(x = Date))+
   geom_point(aes(y = fdom, color = "fdom_raw"))+
   geom_point(aes(y = fdom_TC, color = "fdom_TC"))+
+  geom_point(aes(y = fdom_TCundo, color = "fdom_TCundo"))+
   geom_point(aes(y = temp, color = "temp"))
 
 
