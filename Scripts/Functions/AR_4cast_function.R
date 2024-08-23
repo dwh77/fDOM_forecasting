@@ -26,7 +26,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
                                    output_folder,
                                    calibration_start_date,
                                    model_id,
-                                   targets_url, # where are the targets you are forecasting?
+                                   targets_df, # where are the targets you are forecasting?
                                    water_temp_4cast_data,
                                    noaa_4cast,
                                    # water_temp_4cast_url, #get url for water temp used as covariate
@@ -51,7 +51,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
   
   # Get targets
   message('Getting targets')
-  targets <- readr::read_csv(targets_url, show_col_types = F) |>
+  targets <- targets_df |>
     filter(variable %in% var,
            site_id %in% site,
            depth_m %in% forecast_depths,
@@ -194,7 +194,6 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
   
   message('Generating forecast')
   
-  
   #for loop to run forecast 
   for(i in 2:length(forecasted_dates)) {
     
@@ -253,10 +252,9 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
            site_id = site
     ) |>
     select(datetime, reference_datetime, model_id, site_id,
-           parameter, family, prediction, variable, depth_m,
-           duration, project_id)
+           parameter, family, prediction, variable, depth_m, duration, project_id)
   
-  return(write.csv(forecast_df, file = output_folder, row.names = F))
+  return(write.csv(forecast_df, file = paste0(output_folder, forecast_date, ".csv"), row.names = F))
   # return(write.csv(forecast_df, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_full_unc_", forecast_date, '.csv'), row.names = F))
   
   
@@ -264,9 +262,11 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 
 
 ########### TEst function #######
-# forecast_date <- ymd("2023-04-24")
-# model_id <- "example_fDOM_AR_dwh"
-# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+# forecast_date <- ymd("2024-02-06")
+# 
+# ##set up inputs to function
+# model_id <- "fDOM_AR_dwh"
+# targets_df <- fcr_waterQ
 # var <- "fDOM_QSU_mean"
 # site <- "fcre"
 # forecast_depths <- 1.6
@@ -274,24 +274,23 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 # calibration_start_date <- ymd("2022-11-11")
 # 
 # water_temp_4cast_data <- fcr_flare
-# noaa_4cast <- noaa_daily
+# noaa_4cast <- fcr_bvr_noaa_daily
 # 
 # n_members <- 31
 # forecast_horizon <- 16
-# # output_folder <- "z"
 # output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_date, ".csv")
 # 
 # 
 # 
 # ##run function
 # generate_fDOM_forecast(forecast_date = forecast_date, forecast_horizon = forecast_horizon, n_members = n_members,
-#                        output_folder = output_folder, model_id = model_id, targets_url = targets_url,
+#                        output_folder = output_folder, model_id = model_id, targets_df = targets_df,
 #                        water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
-#                       site = site, forecast_depths = forecast_depths, project_id = project_id, 
+#                       site = site, forecast_depths = forecast_depths, project_id = project_id,
 #                       calibration_start_date = calibration_start_date )
 # 
 # 
-# read.csv("C:/Users/dwh18/Downloads/example_fDOM_AR_dwh_2023-04-24.csv")|>
+# read.csv("C:/Users/dwh18/Downloads/example_fDOM_AR_dwh_2023-04-15.csv")|>
 #   mutate(date = as.Date(datetime)) |>
 #     # filter(forecast_date > ymd("2023-01-03")) |>
 #   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
