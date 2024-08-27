@@ -26,20 +26,6 @@ targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/
 ltreb_targets <- read_csv(targets_url) |> select(-project_id, -duration) |> 
   filter(variable == "fDOM_QSU_mean")
 
-### FCR water Q data
-# fcr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
-#   filter(datetime >= ymd("2022-01-01"),
-#          site_id == "fcre",
-#          depth_m == 1.6,
-#          variable %in% c("fDOM_QSU_mean"))
-# 
-# ###BVR water Q data
-# bvr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
-#   filter(datetime >= ymd("2022-01-01"),
-#          site_id == "bvre",
-#          depth_m == 1.5,
-#          variable %in% c("fDOM_QSU_mean"))
-
 
 ### CCR water Q data
 ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
@@ -60,7 +46,7 @@ ccr_targets <- ccrfull |>
 ##put all data together 
 res_fdom <- rbind(ltreb_targets, ccr_targets)
 
-#reomve uneeded variables after getting data toghether
+#remove unneeded variables after getting data together
 rm(ccr_edi, ccr_L1, ccr_targets, ccrfull, ltreb_targets, targets_url)
 
 
@@ -71,11 +57,9 @@ rm(ccr_edi, ccr_L1, ccr_targets, ccrfull, ltreb_targets, targets_url)
 Set up directories to hold forecasts
 
 ```{r}
+##uncomment lines below if folder don't exist
 # dir.create("../Data/NNETAR_4casts")
 # dir.create("../Data/NNETAR_4casts/allRes")
-# dir.create("../Data/NNETAR_4casts/fcre")
-# dir.create("../Data/NNETAR_4casts/bvre")
-# dir.create("../Data/NNETAR_4casts/ccre")
 
 ```
 
@@ -101,11 +85,7 @@ for (j in 1:length(forecast_date)) {
   fdom_nnetar(forecast_date = forecast_date[j], targets_df = targets_df, var = var, 
               forecast_horizon = forecast_horizon, output_folder = output_folder)
   
-  # fdom_nnetar(forecast_date = forecast_date[j], targets_df = targets_df, site = site, depth = depth,
-  #             var = var,
-  #             forecast_horizon = 16, output_folder = output_folder)
-  
-} #end for loop
+      } #end for loop
 
 
 ```

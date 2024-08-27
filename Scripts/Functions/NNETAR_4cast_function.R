@@ -1,5 +1,6 @@
 ####Generate NNETAR fDOM forecasts
 #adapting MEL and ADD github code
+#Code heavily adapted from MEL github, but copied locally to avoid changes when pulling from github
 #https://github.com/addelany/vera4casts/blob/main/code/combined_workflow/nnetar_workflow.R
 
 # #fableNNETAR
@@ -20,7 +21,7 @@ library(feasts)
 library(urca)
 
 
-#interpolate 
+#### interpolate ----
 interpolate <- function(vec){
   
   #replace missing values at beginning of timeseries
@@ -44,7 +45,7 @@ interpolate <- function(vec){
   
 }
 
-#format data
+#### format data ----
 format_data_NNETAR <- function(targets, end_date){
   
   #read in targets 
@@ -81,7 +82,7 @@ format_data_NNETAR <- function(targets, end_date){
 }
 
 
-#fable
+####fable ----
 
 fableNNETAR <- function(data, reference_datetime, forecast_horizon){
   
