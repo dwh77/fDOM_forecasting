@@ -163,7 +163,7 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
            site_id = site
     ) |>
     select(datetime, reference_datetime, model_id, site_id,
-           parameter, family, prediction, variable, depth_m, duration, project_id)
+           parameter, family, prediction, variable, depth_m) #removing  'duration, project_id' to save csv space
   
   return(write.csv(forecast_df, file = paste0(output_folder, forecast_date, ".csv"), row.names = F))
 
