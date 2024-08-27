@@ -84,15 +84,16 @@ ccr_flare <- read.csv("../Data/GeneratedData/CCR_FLARE_1jan23-12aug24.csv")
 Set up directories to hold forecasts
 
 ```{r}
-dir.create("../Data/AR_4casts")
-dir.create("../Data/AR_4casts/fcre")
-dir.create("../Data/AR_4casts/bvre")
-dir.create("../Data/AR_4casts/ccre")
+##uncomment if folders don't exist locally
+# dir.create("../Data/AR_4casts")
+# dir.create("../Data/AR_4casts/fcre")
+# dir.create("../Data/AR_4casts/bvre")
+# dir.create("../Data/AR_4casts/ccre")
 
 ```
 
 
-## Run FCR AR forecasts 
+## Run AR forecasts for all reservoirs
 
 FCR
 ```{r}
