@@ -83,7 +83,7 @@ Set up directories to hold forecasts
 
 
 
-## Run AR forecasts 
+## Run Met Regression forecasts 
 
 FCR
 ```{r}
