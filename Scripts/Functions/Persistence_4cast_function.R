@@ -110,7 +110,7 @@ generate_baseline_persistenceRW <- function(targets,
       
       #return(forecast)
       
-      return(write.csv(forecast, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_persistence_", forecast_date, '.csv'), row.names = F))
+      return(write.csv(forecast_df, file = paste0(output_folder, forecast_date, ".csv"), row.names = F))
     }
     
   }

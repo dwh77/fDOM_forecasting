@@ -116,7 +116,7 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
       
       message('climatology generated')
       # return(combined)
-      return(write.csv(combined, file = paste0("C:/Users/dwh18/OneDrive/Desktop/R_Projects/fDOM_forecasting/Data/ASLO_talk_forecast_output/", output_folder, "/forecast_climatology_", forecast_date, '.csv'), row.names = F))
+      return(write.csv(forecast_df, file = paste0(output_folder, forecast_date, ".csv"), row.names = F))
       
     } else {
       message('cannot generate climatology for this period')
