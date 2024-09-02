@@ -25,14 +25,14 @@ targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/
 
 ### FCR water Q data
 fcr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
-  filter(datetime >= ymd("2022-01-01"),
+  filter(datetime >= ymd("2022-01-01"), #trim to when we have Water temp 4casts
          site_id == "fcre",
          depth_m == 1.6,
          variable %in% c("fDOM_QSU_mean"))
 
 ###BVR water Q data
 bvr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
-  filter(datetime >= ymd("2022-01-01"),
+  filter(datetime >= ymd("2022-01-01"), #trim to when we have Water temp 4casts
          site_id == "bvre",
          depth_m == 1.5,
          variable %in% c("fDOM_QSU_mean"))
