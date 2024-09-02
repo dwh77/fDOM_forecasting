@@ -110,7 +110,7 @@ generate_baseline_persistenceRW <- function(targets,
       
       #return(forecast)
       
-      return(write.csv(forecast_df, file = paste0(output_folder, forecast_date, ".csv"), row.names = F))
+      return(write.csv(forecast, file = paste0(output_folder, forecast_date, ".csv"), row.names = F))
     }
     
   }
