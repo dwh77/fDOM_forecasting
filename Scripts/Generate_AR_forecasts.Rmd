@@ -85,10 +85,10 @@ Set up directories to hold forecasts
 
 ```{r}
 ##uncomment if folders don't exist locally
-# dir.create("../Data/AR_4casts")
-# dir.create("../Data/AR_4casts/fcre")
-# dir.create("../Data/AR_4casts/bvre")
-# dir.create("../Data/AR_4casts/ccre")
+# dir.create("../Data/Forecast_Outputs/AR_4casts")
+# dir.create("../Data/Forecast_Outputs/AR_4casts/fcre")
+# dir.create("../Data/Forecast_Outputs/AR_4casts/bvre")
+# dir.create("../Data/Forecast_Outputs/AR_4casts/ccre")
 
 ```
 
@@ -116,7 +116,7 @@ noaa_4cast <- fcr_bvr_noaa_daily
 n_members <- 31
 forecast_horizon <- 16
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/AR_4casts/fcre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/fcre/", model_id, "_", site, "_")
 
 
 for (j in 1:length(forecast_date)) {
@@ -160,7 +160,7 @@ noaa_4cast <- fcr_bvr_noaa_daily
 
 n_members <- 31
 forecast_horizon <- 16
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/AR_4casts/bvre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/bvre/", model_id, "_", site, "_")
 
 
 for (j in 1:length(forecast_date)) {
@@ -204,7 +204,7 @@ noaa_4cast <- ccr_noaa_daily
 
 n_members <- 31
 forecast_horizon <- 16
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/AR_4casts/ccre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/ccre/", model_id, "_", site, "_")
 
 
 for (j in 1:length(forecast_date)) {
@@ -223,6 +223,7 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 
 # Days loop broke: 19feb24 (when starting at 1jun24)
 # Days with NA generated warning: 9jul23 - 17sep23; 1aug24 - 4aug24
+
 ```
 
 

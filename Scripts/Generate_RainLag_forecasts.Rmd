@@ -73,10 +73,10 @@ Set up directories to hold forecasts
 
 ```{r}
 ##uncomment if folders don't exist
-# dir.create("../Data/RainLag_4casts")
-# dir.create("../Data/RainLag_4casts/fcre")
-# dir.create("../Data/RainLag_4casts/bvre")
-# dir.create("../Data/RainLag_4casts/ccre")
+# dir.create("../Data/Forecast_Outputs/RainLag_4casts")
+# dir.create("../Data/Forecast_Outputs/RainLag_4casts/fcre")
+# dir.create("../Data/Forecast_Outputs/RainLag_4casts/bvre")
+# dir.create("../Data/Forecast_Outputs/RainLag_4casts/ccre")
 
 ```
 
@@ -104,7 +104,7 @@ calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts s
 targets_df <- fcr_waterQ
 noaa_4cast <- fcr_bvr_noaa_daily
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/RainLag_4casts/fcre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/RainLag_4casts/fcre/", model_id, "_", site, "_")
 
 
 #run forecasts
@@ -149,7 +149,7 @@ calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts s
 targets_df <- bvr_waterQ
 noaa_4cast <- fcr_bvr_noaa_daily
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/RainLag_4casts/bvre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/RainLag_4casts/bvre/", model_id, "_", site, "_")
 
 
 #run forecasts
@@ -193,7 +193,7 @@ calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts s
 targets_df <- ccr_waterQ
 noaa_4cast <- ccr_noaa_daily
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/RainLag_4casts/ccre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/RainLag_4casts/ccre/", model_id, "_", site, "_")
 
 
 #run forecasts
