@@ -1,0 +1,398 @@
+---
+title: "Analyze fDOM hindcasts"
+author: "Dexter Howard"
+date: "2024-09-01"
+output: html_document
+---
+
+
+```{r, message = F}
+library(tidyverse)
+library(score4cast)
+
+```
+
+
+
+## get targets data
+target data 
+```{r}
+### S3 links 
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+### FCR water Q data
+fcr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+  filter( site_id == "fcre",
+         depth_m == 1.6,
+         variable %in% c("fDOM_QSU_mean"))
+
+###BVR water Q data
+bvr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+  filter( site_id == "bvre",
+         depth_m == 1.5,
+         variable %in% c("fDOM_QSU_mean"))
+
+
+### CCR water Q data
+ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
+ccrfull <- rbind(ccr_edi, ccr_L1)
+
+ccr_waterQ <- ccrfull |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T)) |> 
+  mutate(site_id = "ccre",
+         depth_m = 1.5) |> 
+  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
+  pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
+  rename(datetime = Date) |> mutate(project_id = "vera4cast", duration = "P1D")
+
+allres_targets <- rbind(fcr_waterQ, bvr_waterQ, ccr_waterQ) |> 
+  select(site_id, datetime, observation)
+
+
+```
+
+## Compile AR 4cast outputs  
+
+```{r}
+#FCR AR forecasts
+#bind forecast outputs into one data frame 
+fcr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#BVR AR forecasts
+#bind forecast outputs into one data frame 
+bvr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#CCR AR forecasts
+#bind forecast outputs into one data frame 
+ccr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#Compile AR forecasts and write csv
+allres_AR <- rbind(fcr_AR_output_all, bvr_AR_output_all, ccr_AR_output_all)
+
+write.csv(allres_AR, "../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast.csv", row.names = F)
+
+
+```
+
+
+
+### Compile NNETAR 4cast outputs  
+
+All reservoir NNETAR forecasts
+```{r}
+#bind forecast outputs into one data frame 
+allRes_NNETAR_output_all <- list.files(path = "../Data/Forecast_Outputs/NNETAR_4casts/allRes", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+head(allRes_NNETAR_output_all)
+
+#write csv of all data together
+write.csv(allRes_NNETAR_output_all, "../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast.csv", row.names = F)
+
+
+```
+
+
+
+## Compile Climatology 4cast outputs  
+
+```{r}
+#FCR Clim forecasts
+#bind forecast outputs into one data frame 
+fcr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#BVR Clim forecasts
+#bind forecast outputs into one data frame 
+bvr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#CCR Clim forecasts
+#bind forecast outputs into one data frame 
+ccr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#Compile Clim forecasts and write csv
+allres_Clim <- rbind(fcr_Clim_output_all, bvr_Clim_output_all, ccr_Clim_output_all)
+
+write.csv(allres_Clim, "../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4cast.csv", row.names = F)
+
+
+```
+
+
+
+## Compile Persistence 4cast outputs  
+
+```{r}
+#FCR Persist forecasts
+#bind forecast outputs into one data frame 
+fcr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#BVR Persist forecasts
+#bind forecast outputs into one data frame 
+bvr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#CCR Persist forecasts
+#bind forecast outputs into one data frame 
+ccr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#Compile Persist forecasts and write csv
+allres_Persist <- rbind(fcr_Persist_output_all, bvr_Persist_output_all, ccr_Persist_output_all)
+
+write.csv(allres_Persist, "../Data/Forecast_Outputs/Persist_4casts/allReservoir_Persist_4cast.csv", row.names = F)
+
+```
+
+
+
+## Compile RainLag 4cast outputs  
+
+```{r}
+#FCR RainLab forecasts
+#bind forecast outputs into one data frame 
+fcr_RainLag_output_all <- list.files(path = "../Data/Forecast_Outputs/RainLag_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#BVR RainLab forecasts
+#bind forecast outputs into one data frame 
+bvr_RainLag_output_all <- list.files(path = "../Data/Forecast_Outputs/RainLag_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#CCR RainLab forecasts
+#bind forecast outputs into one data frame 
+ccr_RainLag_output_all <- list.files(path = "../Data/Forecast_Outputs/RainLag_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+#Compile RainLag forecasts and write csv
+allres_RainLag <- rbind(fcr_RainLag_output_all, bvr_RainLag_output_all, ccr_RainLag_output_all)
+
+write.csv(allres_RainLag, "../Data/Forecast_Outputs/RainLag_4casts/allReservoir_RainLag_4cast.csv", row.names = F)
+
+```
+
+
+
+## Compile Meteo Regression 4cast outputs  
+
+```{r}
+#FCR MetRegress forecasts
+#bind forecast outputs into one data frame 
+fcr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegress_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()  
+
+
+#BVR MetRegress forecasts
+#bind forecast outputs into one data frame 
+bvr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegress_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()
+
+
+#CCR MetRegress forecasts
+#bind forecast outputs into one data frame 
+ccr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegress_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+  base::lapply(read_csv) |> 
+  bind_rows()
+
+
+#Compile MetRegress forecasts and write csv
+allres_MetRegress <- rbind(fcr_MetRegress_output_all, bvr_MetRegress_output_all, ccr_MetRegress_output_all)
+
+write.csv(allres_MetRegress, "../Data/Forecast_Outputs/MetRegress_4casts/allReservoir_MetRegress_4cast.csv", row.names = F)
+
+
+```
+
+
+
+######### ALL 4 cast are compiled... NOW make the summary files for analysis
+
+```{r}
+#look at headers 
+head(allres_AR)
+head(allres_MetRegress)
+head(allres_RainLag)
+head(allRes_NNETAR_output_all)
+head(allres_Persist)
+head(allres_Clim)
+
+####get models to all mean and SD
+
+#AR
+ARoutputs <- allres_AR |> 
+  group_by(datetime, reference_datetime, site_id) |> 
+  summarise(mu_AR = mean(prediction),
+            sigma_AR = sd(prediction))
+
+
+
+#MetRegress
+MetRegress_outputs <- allres_MetRegress |> 
+  group_by(datetime, reference_datetime, site_id) |> 
+  summarise(mu_MetRegress = mean(prediction),
+            sigma_MetRegress = sd(prediction)) 
+
+
+#RainLag
+RainLag_outputs <- allres_RainLag |> 
+  group_by(datetime, reference_datetime, site_id) |> 
+  summarise(mu_RainLag = mean(prediction),
+            sigma_RainLag = sd(prediction)) 
+
+
+#nnetar
+nnetar_output <- allRes_NNETAR_output_all |> 
+  group_by(datetime, reference_datetime, site_id) |> 
+  summarise(mu_NNETAR = mean(prediction),
+            sigma_NNETAR = sd(prediction))
+
+#climatology
+climatology_outputs <- allres_Clim |> 
+  select(datetime, reference_datetime, site_id, parameter, prediction) |> 
+  pivot_wider(names_from = parameter, values_from = prediction) |> 
+  rename(mu_clim = mu, sigma_clim = sigma)
+
+#persistence
+persistence_outputs <- allres_Persist |> 
+  select(datetime, reference_datetime, site_id, parameter, prediction) |> 
+  pivot_wider(names_from = parameter, values_from = prediction) |> 
+  rename(mu_persist = mu, sigma_persist = sigma)
+
+
+##join models together
+allmodels_meanSD <- full_join(ARoutputs, MetRegress_outputs, by = c("datetime", "reference_datetime", "site_id")) |>
+  full_join(RainLag_outputs,  by = c("datetime", "reference_datetime", "site_id")) |> 
+  full_join(nnetar_output,  by = c("datetime", "reference_datetime", "site_id")) |> 
+  full_join(climatology_outputs,  by = c("datetime", "reference_datetime", "site_id")) |> 
+  full_join(persistence_outputs,  by = c("datetime", "reference_datetime", "site_id")) |> 
+  mutate(Horizon = datetime - reference_datetime)
+
+
+
+##Quick comp RMSE plot
+forecast_outputs_observed <- left_join(allmodels_meanSD, allres_targets, by = c("datetime", "site_id")) |> 
+  mutate(resid_AR = observation - mu_AR,
+         resid_MetRegress = observation - mu_MetRegress,
+         resid_RainLag = observation - mu_RainLag,
+         resid_clim = observation - mu_clim,
+         resid_NNETAR = observation - mu_NNETAR,
+         resid_persist = observation - mu_persist)
+
+
+
+### PLOTS 
+
+#rmse
+forecast_outputs_observed |> 
+  filter(reference_datetime >= ymd("2023-02-01"),
+         reference_datetime <= ymd("2023-08-01")) |> 
+  group_by(Horizon, site_id) |> 
+  summarise(Autoregressive = round(sqrt(mean((mu_AR - observation)^2, na.rm = TRUE)), 2),
+            MetRegress = round(sqrt(mean((mu_MetRegress - observation)^2, na.rm = TRUE)), 2),
+            RainLag = round(sqrt(mean((mu_RainLag - observation)^2, na.rm = TRUE)), 2),
+            Climatology = round(sqrt(mean((mu_clim - observation)^2, na.rm = TRUE)), 2),
+            NNETAR = round(sqrt(mean((mu_NNETAR - observation)^2, na.rm = TRUE)), 2),
+            Persistence = round(sqrt(mean((mu_persist - observation)^2, na.rm = TRUE)), 2)) |>
+  pivot_longer(-c(1:2)) |>
+  rename(model = name) |> 
+  filter(#model == "Autoregressive",
+         Horizon > 0,
+         Horizon < 17) |>
+  ggplot(aes(x = Horizon, y = value, color = model))+ #, shape = model, linetype = model
+  geom_line(linewidth = 1.2)+
+  geom_point(size = 3)+
+  facet_wrap(~site_id)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  # ggtitle("RMSE")+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+    # guides(color = "none")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+    scale_color_manual(values = c("Autoregressive" = "#CC79A7", "Climatology" = "#E69F00", 
+                                "Persistence" = "#56B4E9", "NNETAR" = "#009E73"))
+
+
+
+
+
+```
+
+## CRPS trial 
+
+
+```{r}
+## example from github score4casts
+forecast_ex <- tibble(datetime = as_date("2023-01-02"),
+             site_id = "fcre",
+             depth = c(1,2),
+             model_id = "test",
+             reference_datetime = as_date("2023-01-02"),
+             variable = "temp",
+             family = "bernoulli",
+             parameter = "prob",
+             prediction = c(0.3, 0.1))
+
+target_ex <- tibble(datetime = as_date("2023-01-02"),
+             site_id = "fcre",
+             depth = c(1,2),
+             variable = "temp",
+             observation = c(1,0))
+
+crps_logs_score(forecast_ex, target_ex, extra_groups = "depth")
+
+
+##trial with AR 
+head(fcr_AR_output_all)
+head(fcr_waterQ)
+
+crps_logs_score(fcr_AR_output_all, fcr_waterQ)
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
