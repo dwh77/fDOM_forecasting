@@ -48,8 +48,7 @@ ccr_waterQ <- ccrfull |>
   pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
   rename(datetime = Date) |> mutate(project_id = "vera4cast", duration = "P1D")
 
-allres_targets <- rbind(fcr_waterQ, bvr_waterQ, ccr_waterQ) |> 
-  select(site_id, datetime, observation)
+allres_targets <- rbind(fcr_waterQ, bvr_waterQ, ccr_waterQ) 
 
 
 ```
@@ -351,6 +350,47 @@ forecast_outputs_observed |>
 
 ```
 
+
+## Scoring forecast 
+using score4cast to get crps
+
+```{r}
+## AR scores 
+AR_scores <- crps_logs_score(allres_AR, allres_targets)
+
+write.csv(AR_scores, "../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast_Scores.csv", row.names = F)
+
+## RainLag scores 
+RainLag_scores <- crps_logs_score(allres_RainLag, allres_targets)
+
+write.csv(RainLag_scores, "../Data/Forecast_Outputs/RainLag_4casts/allReservoir_RainLag_4cast_Scores.csv", row.names = F)
+
+## MetRegress scores 
+MetRegress_scores <- crps_logs_score(allres_MetRegress, allres_targets)
+
+write.csv(MetRegress_scores, "../Data/Forecast_Outputs/MetRegress_4casts/allReservoir_MetRegress_4cast_Scores.csv", row.names = F)
+
+## nnetar scores 
+nnetar_scores <- crps_logs_score(allRes_NNETAR_output_all, allres_targets)
+
+write.csv(nnetar_scores, "../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast_Scores.csv", row.names = F)
+
+
+## Clim scores 
+Clim_scores <- crps_logs_score(allres_Clim, allres_targets)
+
+write.csv(Clim_scores, "../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4cast_Scores.csv", row.names = F)
+
+## Persist scores 
+Persist_scores <- crps_logs_score(allres_Persist, allres_targets)
+
+write.csv(Persist_scores, "../Data/Forecast_Outputs/Persist_4casts/allReservoir_Persist_4cast_Scores.csv", row.names = F)
+
+
+```
+
+
+
 ## CRPS trial 
 
 
@@ -375,11 +415,15 @@ target_ex <- tibble(datetime = as_date("2023-01-02"),
 crps_logs_score(forecast_ex, target_ex, extra_groups = "depth")
 
 
-##trial with AR 
+##trial with AR subset 
 head(fcr_AR_output_all)
 head(fcr_waterQ)
 
 crps_logs_score(fcr_AR_output_all, fcr_waterQ)
+
+#clim trial 
+crps_logs_score(fcr_Clim_output_all, fcr_waterQ)
+
 
 
 ```
