@@ -22,13 +22,73 @@ Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores.csv") |
          model_id = ifelse(model_id == "fDOM_RainLag_dwh", "RainLag", model_id),
          model_id = ifelse(model_id == "fDOM_MetRegression_dwh", "MetRegress", model_id),
          model_id = ifelse(model_id == "fableNNETAR", "NNETAR", model_id)
-         ) #update model names for plotting
+         ) |>  #update model names for plotting
+   mutate(model_type = ifelse(model_id %in% c("Persist", "Clim"), "Null", NA),
+         model_type = ifelse(model_id %in% c("NNETAR"), "ML", model_type),
+         model_type = ifelse(model_id %in% c("AR", "RainLag", "MetRegress"), "Empirical", model_type)
+         ) #grouping by model types
 
 
 ```
 
 
 ## Summary Plots over Horizons
+
+```{r}
+#rmse with model class trial 
+Scored_forecasts |> 
+  filter(reference_datetime >= ymd("2023-02-01"),
+         reference_datetime <= ymd("2024-08-01")) |> 
+  group_by(Horizon, site_id, model_id, model_type) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |>
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ 
+  geom_line(linewidth = 1.2)+
+  #geom_point(size = 3)+
+  facet_wrap(~site_id)+
+  #facet_grid(model_id~site_id)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("AR" = "#CC6677", "Clim" = "#88CCEE", "Persist" = "#DDCC77", 
+                              "NNETAR" = "#117733", "RainLag" = "#332288", "MetRegress" = "#888888"))
+
+
+#CRPS, RMSE, SD in one 
+Scored_forecasts |> 
+  filter(reference_datetime >= ymd("2023-02-01"),
+         reference_datetime <= ymd("2024-08-01")) |> 
+  group_by(Horizon, site_id, model_id, model_type) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+            CRPS = mean(crps, na.rm = T),
+            SD = mean(sd, na.rm = T)) |>
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+ 
+  geom_line(linewidth = 1.2)+
+  #geom_point(size = 3)+
+  facet_grid(name~site_id, scales = "free_y")+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  labs(x = "Horizon")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("AR" = "#CC6677", "Clim" = "#88CCEE", "Persist" = "#DDCC77", 
+                              "NNETAR" = "#117733", "RainLag" = "#332288", "MetRegress" = "#888888"))+
+  scale_linetype_manual(values = c("Empirical" = 1, "ML" = 2, "Null" = 3))
+
+
+#### values in table 
+# Scored_forecasts |> 
+#   filter(reference_datetime >= ymd("2023-02-01"),
+#          reference_datetime <= ymd("2024-08-01")) |> 
+#   group_by(Horizon, site_id, model_id, model_type) |> 
+#   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+#             CRPS = mean(crps, na.rm = T),
+#             SD = mean(sd, na.rm = T)) |>
+#   filter(Horizon %in% c(1,8,16))  
+#   pivot_longer(-c(1:4))
+
+
+```
+
+
 
 RMSE, CRPS, SD
 ```{r}
@@ -133,6 +193,34 @@ Scored_forecasts |>
   scale_color_manual(values = c("AR" = "#CC6677", "Clim" = "#88CCEE", "Persist" = "#DDCC77", 
                               "NNETAR" = "#117733", "RainLag" = "#332288", "MetRegress" = "#888888"))
 
+
+```
+
+
+## Residual timeseries
+
+```{r}
+#resid 
+for (i in unique(Scored_forecasts$model_id)) {
+  fig <- Scored_forecasts |> 
+  filter(reference_datetime >= ymd("2023-02-01")) |> 
+  filter(model_id == i,
+         Horizon %in% c(1,8,16)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  mutate(resid = mean - observation) |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = resid))+
+  facet_grid(site_id~factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead")), scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  ylim(-10, 10)+
+  labs(x = element_blank(), y = "Resid (mean predicted - observered)", title = i)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  
+    print(fig)
+
+      }# end for loop
 
 ```
 
