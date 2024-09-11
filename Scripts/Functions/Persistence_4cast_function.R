@@ -116,3 +116,41 @@ generate_baseline_persistenceRW <- function(targets,
   }
 }
 
+### Test 4cast function ####
+#uncomment lines below to run
+
+# #get target data
+# targets_df <- readr::read_csv("https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+#                               , show_col_types = FALSE) |>
+#   filter(site_id == "fcre",
+#          depth_m == 1.6,
+#          variable %in% c("fDOM_QSU_mean"))
+# 
+# #set inputs 
+# forecast_date <- ymd("2024-05-11")
+# 
+# ##set up inputs to function
+# model_id <- "fable_persistence"
+# var <- "fDOM_QSU_mean"
+# site <- "fcre"
+# depth <- 1.6
+# h <- 17
+# 
+# 
+# #update local folder
+# output_folder <- paste0("C:/Users/dwh18/Downloads/", site, "_Persist_")
+# 
+# 
+# #run example
+# generate_baseline_persistenceRW(targets = targets_df, site = site, var = var, 
+#                                 forecast_date = forecast_date, model_id = model_id, 
+#                                 h = h, depth = depth, bootstrap = F, 
+#                                 output_folder = output_folder)
+# 
+# 
+# #plot example
+# read.csv("C:/Users/dwh18/Downloads/fcre_Persist_2024-05-11.csv")|>
+#   mutate(date = as.Date(datetime)) |>
+#   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
+#   geom_line() #would want to update plotting so sigma is plotted as a ribbon not just a line
+

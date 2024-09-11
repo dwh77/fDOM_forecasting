@@ -1,5 +1,7 @@
 #### Function to run AR model forecasts
 
+library(tidyverse)
+
 ## helper functions
 ##function to pull current value 
 current_value <- function(dataframe, variable, start_date){
@@ -261,24 +263,36 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 }  ##### end function
 
 
-########### TEst function #######
-# forecast_date <- ymd("2024-02-06")
+########### Test function #######
+##uncomment all lines below and run to run an example 4cast for one day 
+
+# forecast_date <- ymd("2024-05-06")
 # 
 # ##set up inputs to function
 # model_id <- "fDOM_AR_dwh"
-# targets_df <- fcr_waterQ
 # var <- "fDOM_QSU_mean"
 # site <- "fcre"
 # forecast_depths <- 1.6
 # project_id <- "vera4cast"
 # calibration_start_date <- ymd("2022-11-11")
-# 
-# water_temp_4cast_data <- fcr_flare
-# noaa_4cast <- fcr_bvr_noaa_daily
-# 
 # n_members <- 31
 # forecast_horizon <- 16
-# output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_date, ".csv")
+# 
+# #targets
+# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+# targets_df <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+#   filter(datetime >= ymd("2022-01-01"), #trim to when we have Water temp 4casts
+#          site_id == "fcre",
+#          depth_m == 1.6,
+#          variable %in% c("fDOM_QSU_mean"))
+# 
+# #water temp 4casts
+# water_temp_4cast_data <- read.csv("./Data/GeneratedData/FCR_FLARE_11nov22-12aug24.csv")
+# #noaa 4casts
+# noaa_4cast <- read.csv("./Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv")
+# 
+# ### set to your own local folder
+# output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_")
 # 
 # 
 # 
@@ -290,9 +304,9 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 #                       calibration_start_date = calibration_start_date )
 # 
 # 
-# read.csv("C:/Users/dwh18/Downloads/example_fDOM_AR_dwh_2023-04-15.csv")|>
+# #update to your local file path and check forecast plots
+# read.csv("C:/Users/dwh18/Downloads/fDOM_AR_dwh_2024-05-06.csv")|>
 #   mutate(date = as.Date(datetime)) |>
-#     # filter(forecast_date > ymd("2023-01-03")) |>
 #   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
 #   geom_line()
 

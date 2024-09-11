@@ -184,3 +184,67 @@ fdom_nnetar <- function(forecast_date,
   
 } # end fucntion 
 
+
+##### Test function #####
+##uncomment lines below to run function for one day 
+
+
+# ## Set up target data 
+# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+# 
+# ltreb_targets <- read_csv(targets_url) |> select(-project_id, -duration) |> 
+#   filter(variable == "fDOM_QSU_mean")
+# 
+# 
+# # CCR water Q data
+# ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+# ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
+# ccrfull <- rbind(ccr_edi, ccr_L1)
+# 
+# ccr_targets <- ccrfull |> 
+#   mutate(Date = as.Date(DateTime)) |> 
+#   group_by(Date) |> 
+#   summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T)) |> 
+#   mutate(site_id = "ccre",
+#          depth_m = 1.5) |> 
+#   select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
+#   pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
+#   rename(datetime = Date)
+# 
+# 
+# #put all data together 
+# res_fdom <- rbind(ltreb_targets, ccr_targets)
+# 
+# #remove unneeded variables after getting data together
+# rm(ccr_edi, ccr_L1, ccr_targets, ccrfull, ltreb_targets, targets_url)
+# 
+# 
+# 
+# ###function inputs 
+# forecast_date <- ymd("2023-05-06")
+# 
+# var <- "fDOM_QSU_mean"
+# targets_df <- res_fdom
+# forecast_horizon <- 16
+# 
+# #update for local folder
+# output_folder <- paste0("C:/Users/dwh18/Downloads/", "NNETAR_")
+# 
+# 
+# #run function
+# fdom_nnetar(forecast_date = forecast_date, targets_df = targets_df, var = var, 
+#               forecast_horizon = forecast_horizon, output_folder = output_folder)
+#   
+# 
+# #plot example forecast
+# read.csv("C:/Users/dwh18/Downloads/NNETAR_2023-05-06.csv")|>
+#   mutate(date = as.Date(datetime)) |>
+#   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
+#   geom_line()+
+#   facet_wrap(~site_id) + guides(color = "none")
+
+
+
+
+
+

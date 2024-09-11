@@ -171,8 +171,10 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
 }  ##### end function
 
 
-########### TEst function #######
-# forecast_date <- ymd("2024-07-06")
+########### Test function #######
+##uncomment all lines below and run to run an example 4cast for one day 
+
+# forecast_date <- ymd("2024-05-06")
 # model_id <- "fDOM_MetRegression_dwh"
 # var <- "fDOM_QSU_mean"
 # site <- "fcre"
@@ -183,32 +185,29 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
 # 
 # calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
 # 
-# # targets_df <- readr::read_csv("https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz", show_col_types = FALSE) |>
-# #   filter(
-# #     #datetime >= ymd("2022-01-01"),
-# #     site_id == "fcre",
-# #     depth_m == 1.6,
-# #     variable %in% c("fDOM_QSU_mean"))
-# targets_df <- targets_df
+# targets_df <- readr::read_csv("https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz", show_col_types = FALSE) |>
+#   filter(
+#     site_id == "fcre",
+#     depth_m == 1.6,
+#     variable %in% c("fDOM_QSU_mean"))
 # 
 # 
-# #noaa_4cast <- read.csv("C:/Users/dwh18/OneDrive/Desktop/R_projects/fdom_4cast/Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv")
-# noaa_4cast <- noaa_4cast
+# noaa_4cast <- read.csv("./Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv")
 # 
-# output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_", forecast_date, ".csv")
+# # update for local folder
+# output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_")
 # 
 # 
 # # ##run function
 # generate_fDOM_regress_forecast(forecast_date = forecast_date, forecast_horizon = forecast_horizon, n_members = n_members,
 #                        output_folder = output_folder, model_id = model_id, targets_df = targets_df,
-#                        noaa_4cast = noaa_4cast, var = var,site = site, forecast_depths = forecast_depths, 
+#                        noaa_4cast = noaa_4cast, var = var,site = site, forecast_depths = forecast_depths,
 #                        project_id = project_id,
 #                       calibration_start_date = calibration_start_date )
 # 
 # 
-# read.csv("C:/Users/dwh18/Downloads/fDOM_MetRegression_dwh_2024-02-06.csv2024-07-06.csv")|>
+# read.csv("C:/Users/dwh18/Downloads/fDOM_MetRegression_dwh_2024-05-06.csv")|>
 #   mutate(date = as.Date(datetime)) |>
-#     # filter(forecast_date > ymd("2023-01-03")) |>
 #   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
 #   geom_line()
 
