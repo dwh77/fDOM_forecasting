@@ -1,5 +1,5 @@
 # Forecasting fDOM in VA reservoirs 
-Repo for forecast development and analysis of fDOM forecasts in Southwest VA reservoirs
+Repo for forecast development and analysis of fluorescent dissolved organic matter (fDOM) forecasts in Southwest VA reservoirs
 
 ## Recreating all analysis steps 
 Run 1a_Install_Packages.R and 1b_Download_Data.R located in './Scripts/'. These scripts will download all need packages and data to rerun the entire analysis.
