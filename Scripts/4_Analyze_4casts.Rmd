@@ -135,6 +135,7 @@ Scored_forecasts |>
 
 mean of models 
 ```{r}
+#metric ~ reservoirs
 Scored_forecasts |> 
   mutate(Julian = yday(datetime),
          Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
@@ -161,6 +162,34 @@ Scored_forecasts |>
   theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
   scale_color_manual(values = c("all" = "black", "Fall" = "orange", "Spring" = "turquoise", 
                               "Summer" = "green4", "Winter" = "gray"))
+
+
+#metric ~ Seasons
+Scored_forecasts |> 
+  mutate(Julian = yday(datetime),
+         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+         ) |> 
+  filter(reference_datetime >= ymd("2023-02-01"),
+         reference_datetime <= ymd("2024-08-01")) |> 
+  group_by(Horizon, site_id, Season) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+            CRPS = mean(crps, na.rm = T),
+            SD = mean(sd, na.rm = T)
+            ) |>
+  pivot_longer(-c(1:3)) |> 
+  group_by(Horizon, Season, name) |> 
+  mutate(value_all = mean(value, na.rm = T)) |> 
+  ggplot(aes(x = Horizon, y = value, color = site_id))+ 
+  geom_line(linewidth = 1.2)+
+  geom_line(aes(x = Horizon, y = value_all, color = "all"), linewidth = 1.2)+
+  facet_grid(name~Season, scales = "free_y")+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  labs(x = "Horizon", color = "Reservoir", title = "Mean across models")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("all" = "black", "fcre" = "#009E73", "bvre" = "orange", "ccre" = "skyblue"))
 
 
 ```
