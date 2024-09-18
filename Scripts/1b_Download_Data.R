@@ -1,7 +1,39 @@
-#### Downloaded hindcasts that are to large to reload interatively from S3 buckets 
+#### Downloaded needed targets, water temp hindcasts, and NOAA hindcasts from S3 buckets 
 
 #packages 
 library(tidyverse)
+
+#### FCR, BVR, and CCR fDOM target data  ------------------------------------------
+
+#### FCR and BVR through LTREB portal
+### S3 links 
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+ltreb_targets <- read_csv(targets_url) |> 
+  select(-project_id, -duration) |> 
+  filter(variable == "fDOM_QSU_mean")
+
+
+#### CCR water Q data
+ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
+ccrfull <- rbind(ccr_edi, ccr_L1)
+
+ccr_waterQ <- ccrfull |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T)) |> 
+  mutate(site_id = "ccre",
+         depth_m = 1.5) |> 
+  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
+  pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
+  rename(datetime = Date)
+
+####bind reservoirs together and write csv
+res_fdom <- rbind(ltreb_targets, ccr_waterQ)
+
+write.csv(res_fdom, "Data/GeneratedData/Targets_fDOM_allReservoirs.csv", row.names = F)
+
 
 
 #### NOAA weather forecasts for BVR and FCR ------------------------------------------

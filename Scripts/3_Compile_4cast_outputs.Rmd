@@ -17,39 +17,23 @@ library(score4cast)
 ## get targets data
 
 ```{r}
-### S3 links 
-targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+### Read in df 
+targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 
 ### FCR water Q data
-fcr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
-  filter( site_id == "fcre",
-         depth_m == 1.6,
-         variable %in% c("fDOM_QSU_mean"))
+fcr_waterQ <- targets_fdom |>
+  filter(site_id == "fcre")
 
 ###BVR water Q data
-bvr_waterQ <- readr::read_csv(targets_url, show_col_types = FALSE) |>
-  filter( site_id == "bvre",
-         depth_m == 1.5,
-         variable %in% c("fDOM_QSU_mean"))
-
+bvr_waterQ <- targets_fdom |>
+  filter(site_id == "bvre")
 
 ### CCR water Q data
-ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
-ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
-ccrfull <- rbind(ccr_edi, ccr_L1)
-
-ccr_waterQ <- ccrfull |> 
-  mutate(Date = as.Date(DateTime)) |> 
-  group_by(Date) |> 
-  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T)) |> 
-  mutate(site_id = "ccre",
-         depth_m = 1.5) |> 
-  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
-  pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
-  rename(datetime = Date) |> mutate(project_id = "vera4cast", duration = "P1D")
+ccr_waterQ <- targets_fdom |>
+  filter(site_id == "ccre")
 
 #bind all three together for scoring later
-allres_targets <- rbind(fcr_waterQ, bvr_waterQ, ccr_waterQ) 
+allres_targets <- targets_fdom #rename to match prior code 
 
 
 ```
