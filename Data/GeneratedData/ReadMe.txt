@@ -1,1 +1,1 @@
-Folder to hold generated data from s3 buckets that are to large and time consuming to rerun each hindcast iteration
+Folder to hold downloaded data from EDI and s3 buckets that will be used to generate forecasts. This included NOAA and FLARE water temperature forecasts and fDOM target data. 

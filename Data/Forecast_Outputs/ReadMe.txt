@@ -1,0 +1,1 @@
+Folder to hold forecast outputs if you are interested in rerunning the entire analysis.

@@ -5,4 +5,9 @@
 fDOM_4cast.Rproj
 Data/GeneratedData/
 Scripts/Old_Scripts/
-Data/Forecast_Outputs/
+Data/Forecast_Outputs/AR_4casts
+Data/Forecast_Outputs/Clim_4casts
+Data/Forecast_Outputs/MetRegress_4casts
+Data/Forecast_Outputs/NNETAR_4casts
+Data/Forecast_Outputs/Persist_4casts
+Data/Forecast_Outputs/RainLag_4casts
