@@ -279,12 +279,10 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 # forecast_horizon <- 16
 # 
 # #targets
-# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
-# targets_df <- readr::read_csv(targets_url, show_col_types = FALSE) |>
+#targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+# targets_df <- targets_fdom |>
 #   filter(datetime >= ymd("2022-01-01"), #trim to when we have Water temp 4casts
-#          site_id == "fcre",
-#          depth_m == 1.6,
-#          variable %in% c("fDOM_QSU_mean"))
+#          site_id == "fcre")
 # 
 # #water temp 4casts
 # water_temp_4cast_data <- read.csv("./Data/GeneratedData/FCR_FLARE_11nov22-12aug24.csv")

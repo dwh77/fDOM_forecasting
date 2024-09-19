@@ -120,11 +120,9 @@ generate_baseline_persistenceRW <- function(targets,
 #uncomment lines below to run
 
 # #get target data
-# targets_df <- readr::read_csv("https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
-#                               , show_col_types = FALSE) |>
-#   filter(site_id == "fcre",
-#          depth_m == 1.6,
-#          variable %in% c("fDOM_QSU_mean"))
+# targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+# targets_df <- targets_fdom |>
+#   filter(site_id == "fcre")
 # 
 # #set inputs 
 # forecast_date <- ymd("2024-05-11")

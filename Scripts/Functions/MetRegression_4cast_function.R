@@ -185,11 +185,9 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
 # 
 # calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
 # 
-# targets_df <- readr::read_csv("https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz", show_col_types = FALSE) |>
-#   filter(
-#     site_id == "fcre",
-#     depth_m == 1.6,
-#     variable %in% c("fDOM_QSU_mean"))
+# targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+# targets_df <- targets_fdom |>
+#   filter(site_id == "fcre")
 # 
 # 
 # noaa_4cast <- read.csv("./Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv")
