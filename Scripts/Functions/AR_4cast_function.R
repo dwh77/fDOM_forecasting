@@ -279,7 +279,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 # forecast_horizon <- 16
 # 
 # #targets
-#targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+#targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
 #   filter(datetime >= ymd("2022-01-01"), #trim to when we have Water temp 4casts
 #          site_id == "fcre")

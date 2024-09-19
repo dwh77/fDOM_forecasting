@@ -205,7 +205,7 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
 # 
 # calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
 # 
-# targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+# targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
 #   filter(site_id == "fcre")
 # 

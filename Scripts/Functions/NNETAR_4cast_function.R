@@ -190,7 +190,7 @@ fdom_nnetar <- function(forecast_date,
 
 
 # ## Set up target data 
-# targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+# targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
 #   filter(site_id == "fcre")
 # 
