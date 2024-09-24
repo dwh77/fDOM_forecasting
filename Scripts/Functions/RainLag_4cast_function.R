@@ -48,8 +48,7 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
     group_by(reference_datetime, variable) |> 
     summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>  #get daily means (from ensembles) for each variable
     pivot_wider(names_from = variable, values_from = prediction) |> 
-    filter(ymd(reference_datetime) < forecast_date
-    ) |> 
+    filter(ymd(reference_datetime) < forecast_date) |> 
     mutate(reference_datetime = as.Date(reference_datetime)) |> 
     rename(datetime = reference_datetime) |> 
     select(datetime, precipitation_flux)
