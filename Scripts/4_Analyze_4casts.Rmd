@@ -85,13 +85,13 @@ Scored_forecasts |>
   filter(reference_datetime >= ymd("2023-02-01"),
          reference_datetime <= ymd("2024-08-01")) |> 
   filter(model_id == ifelse(site_id %in% c("fcre", "bvre"), "Persist", "AR")) |> #get just highest performing
-  group_by(Horizon, site_id) |> 
+  group_by(Horizon, site_id, model_id) |> 
   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
             CRPS = mean(crps, na.rm = T),
             SD = mean(sd, na.rm = T)
             ) |>
-  pivot_longer(-c(1:2)) |> 
-  ggplot(aes(x = Horizon, y = value, color = site_id))+ 
+  pivot_longer(-c(1:3)) |> 
+  ggplot(aes(x = Horizon, y = value, color = site_id, linetype = model_id))+ 
   geom_line(linewidth = 1.2)+
   facet_wrap(~name, scales = "free_y")+
   scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
@@ -194,6 +194,36 @@ Scored_forecasts |>
 
 ```
 
+best model: just taking model from above
+
+```{r}
+Scored_forecasts |> 
+  mutate(Julian = yday(datetime),
+         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+         ) |> 
+  filter(reference_datetime >= ymd("2023-02-01"),
+         reference_datetime <= ymd("2024-08-01")) |> 
+  filter(model_id == ifelse(site_id %in% c("fcre", "bvre"), "Persist", "AR")) |> #get just highest performing
+  group_by(Horizon, site_id, model_id, Season) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+            CRPS = mean(crps, na.rm = T),
+            SD = mean(sd, na.rm = T)
+            ) |>
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = Horizon, y = value, color = site_id, linetype = model_id))+ 
+  geom_line(linewidth = 1.2)+
+  facet_grid(name~Season, scales = "free_y")+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  labs(x = "Horizon", color = "Reservoir", title = "Best models")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("all" = "black", "fcre" = "#009E73", "bvre" = "orange", "ccre" = "skyblue"))
+
+
+```
+
 
 
 all models and reservoirs
@@ -212,7 +242,7 @@ Scored_forecasts |>
   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |>
   ggplot(aes(x = Horizon, y = RMSE, color = model_id))+ # color = model_id
   geom_line(linewidth = 1.2)+
-  geom_point(size = 3)+
+  # geom_point(size = 3)+
   facet_grid(site_id~Season)+
   scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
   labs(x = "Horizon", y = "RMSE (QSU)")+
@@ -362,6 +392,22 @@ example_forecast_data |>
   # ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
   guides(fill = guide_legend(nrow = 1))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+#change orientation for conceputal figure
+example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, color = model_id))+
+  facet_wrap(~site_id, scales = "free", nrow = 3) +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  # ylim(0,40)+
+  # guides(x =  guide_axis(angle = 30)) +
+  guides(fill = guide_legend(nrow = 2))+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
 
 
