@@ -16,7 +16,7 @@ current_value <- function(dataframe, variable, start_date){
 }
 
 #function to generate 30 ensembles of fDOM IC based on standard deviation arround current observation
-get_IC_uncert <- function(curr_fdom, n_members, ic_sd = 0.1){
+get_IC_uncert <- function(curr_fdom, n_members, ic_sd = 0.07){
   rnorm(n = n_members, mean = curr_fdom, sd = ic_sd)
 }
 
@@ -178,7 +178,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
   ic_df <- tibble(date = rep(as.Date(forecast_date), times = n_members),
                   ensemble_member = c(1:n_members),
                   forecast_variable = var,
-                  value = get_IC_uncert(curr_fdom, n_members, ic_sd = 0.1),
+                  value = get_IC_uncert(curr_fdom, n_members, ic_sd = 0.07),
                   uc_type = "total")
   
   #set up table to hold forecast output 
