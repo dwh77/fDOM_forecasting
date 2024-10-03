@@ -117,9 +117,9 @@ fableNNETAR <- function(data, reference_datetime, forecast_horizon){
     as_tsibble(key = site_id, index = datetime)
   
   #make forecast
-  fc <- forecast(my.nnar, new_data = new_data, bootstrap = TRUE, times = 500)
+  fc <- forecast(my.nnar, new_data = new_data, bootstrap = TRUE, times = 31)
   
-  ensemble <- matrix(data = NA, nrow = length(fc$observation), ncol = 500)
+  ensemble <- matrix(data = NA, nrow = length(fc$observation), ncol = 31)
   for(i in 1:length(fc$observation)){
     ensemble[i,] <- unlist(fc$observation[i])
   }
@@ -134,7 +134,7 @@ fableNNETAR <- function(data, reference_datetime, forecast_horizon){
                duration = "P1D",
                project_id = "vera4cast",
                depth_m = ifelse(site_id == "fcre",1.6,1.5)) %>%
-    pivot_longer(X1:X500, names_to = "parameter", values_to = "prediction") %>%
+    pivot_longer(X1:X31, names_to = "parameter", values_to = "prediction") %>%
     mutate(across(parameter, substr, 2, nchar(parameter)))  
   
   #return ensemble output in EFI format
