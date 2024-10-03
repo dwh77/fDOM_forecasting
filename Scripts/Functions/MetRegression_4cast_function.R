@@ -78,15 +78,22 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
   model_fit <- summary(fdom_model)
   
   coeffs <- model_fit$coefficients
-  # params_se <- model_fit$coefficients[,2] 
+  params_se <- model_fit$coefficients[,2] 
   
-  # #### get param uncertainty
-  #get param distribtuions for parameter uncertainity
-  # param_df <- data.frame(beta_int = rnorm(31, coeffs[1], params_se[1]),
-  #                        beta_SW = rnorm(31, coeffs[2], params_se[2]),
-  #                        beta_rain = rnorm(31, coeffs[3], params_se[3]),
-  #                        beta_rainLag = rnorm(31, coeffs[4], params_se[4]))
-  # )
+  #### get param uncertainty
+  ##get param distribtuions for parameter uncertainity
+   param_df <- data.frame(beta_int = rnorm(31, coeffs[1], params_se[1]),
+                          beta_SW = rnorm(31, coeffs[2], params_se[2]),
+                          beta_rain = rnorm(31, coeffs[3], params_se[3]),
+                          beta_rainLag = rnorm(31, coeffs[4], params_se[4])
+   )
+   
+   ####get process uncertainty
+   #find residuals
+   fit_df_noNA <- na.omit(fit_df)
+   mod <- predict(fdom_model, data = fit_df_noNA)
+   residuals <- mod - fit_df_noNA$fDOM_QSU_mean
+   sigma <- sd(residuals, na.rm = TRUE) # Process Uncertainty Noise Std Dev.; this is your sigma
   
   
   #-------------------------------------
@@ -106,7 +113,7 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
                               Horizon = date - reference_datetime,
                               forecast_variable = var,
                               value = as.double(NA),
-                              uc_type = "noaa") 
+                              uc_type = "total") 
 
   
   #-------------------------------------
@@ -138,9 +145,10 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
     
 
     #run model
-    fdom_pred$value <- coeffs[1] + (met_sw_driv$prediction * coeffs[2]) + 
-      (met_precip_driv$prediction * coeffs[3]) + 
-      (met_precip_lag_driv$prediction * coeffs[4]) 
+    fdom_pred$value <- param_df$beta_int + (met_sw_driv$prediction *  param_df$beta_SW) + 
+      (met_precip_driv$prediction * param_df$beta_rain) + 
+      (met_precip_lag_driv$prediction * param_df$beta_rainLag) +
+      rnorm(n = 31, mean = 0, sd = sigma) #process uncert
     
     #insert values back into the forecast dataframe
     forecast_full_unc <- forecast_full_unc %>%
