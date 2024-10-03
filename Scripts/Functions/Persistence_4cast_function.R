@@ -37,9 +37,9 @@ generate_baseline_persistenceRW <- function(targets,
            site_id %in% site,
            depth_m %in% target_depths,
            datetime < forecast_date) |>
-    group_by(variable, site_id, depth_m, duration, project_id, datetime) |>
+    group_by(variable, site_id, depth_m, datetime) |>
     summarise(observation = mean(observation), .groups = 'drop') |>  # get rid of the repeat observations by finding the mean
-    as_tsibble(key = c('variable', 'site_id', 'depth_m', 'duration', 'project_id'), index = 'datetime') |>
+    as_tsibble(key = c('variable', 'site_id', 'depth_m'), index = 'datetime') |>
     # add NA values up to today (index)
     fill_gaps(.end = forecast_date)
   
@@ -77,7 +77,7 @@ generate_baseline_persistenceRW <- function(targets,
                family = 'ensemble',
                reference_datetime = forecast_date)  |>
         select(any_of(c("model_id", "datetime", "reference_datetime","site_id", "variable", "family",
-                        "parameter", "prediction", "project_id", "duration", "depth_m" )))|>
+                        "parameter", "prediction", "depth_m" )))|>
         select(-any_of('.model'))|>
         filter(datetime > reference_datetime)|>
         ungroup() |>
@@ -101,7 +101,7 @@ generate_baseline_persistenceRW <- function(targets,
                family = 'normal',
                reference_datetime=forecast_date) |>
         select(all_of(c("model_id", "datetime", "reference_datetime","site_id", "variable", "family",
-                        "parameter", "prediction", "project_id", "duration", "depth_m" ))) |>
+                        "parameter", "prediction", "depth_m" ))) |>
         select(-any_of('.model')) |>
         filter(datetime > reference_datetime) |>
         ungroup() |>
@@ -124,7 +124,7 @@ generate_baseline_persistenceRW <- function(targets,
 # targets_df <- targets_fdom |>
 #   filter(site_id == "fcre")
 # 
-# #set inputs 
+# #set inputs
 # forecast_date <- ymd("2024-05-11")
 # 
 # ##set up inputs to function
@@ -140,9 +140,9 @@ generate_baseline_persistenceRW <- function(targets,
 # 
 # 
 # #run example
-# generate_baseline_persistenceRW(targets = targets_df, site = site, var = var, 
-#                                 forecast_date = forecast_date, model_id = model_id, 
-#                                 h = h, depth = depth, bootstrap = F, 
+# generate_baseline_persistenceRW(targets = targets_df, site = site, var = var,
+#                                 forecast_date = forecast_date, model_id = model_id,
+#                                 h = h, depth = depth, bootstrap = F,
 #                                 output_folder = output_folder)
 # 
 # 
@@ -151,4 +151,4 @@ generate_baseline_persistenceRW <- function(targets,
 #   mutate(date = as.Date(datetime)) |>
 #   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
 #   geom_line() #would want to update plotting so sigma is plotted as a ribbon not just a line
-
+# 
