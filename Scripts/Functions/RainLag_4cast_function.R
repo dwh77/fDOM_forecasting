@@ -110,15 +110,22 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
   model_fit <- summary(fdom_model)
   
   coeffs <- model_fit$coefficients
-  # params_se <- model_fit$coefficients[,2] 
+  params_se <- model_fit$coefficients[,2] 
   
-  # #### get param uncertainty
-  #get param distribtuions for parameter uncertainity
-  # param_df <- data.frame(beta_int = rnorm(31, coeffs[1], params_se[1]),
-  #                        beta_SW = rnorm(31, coeffs[2], params_se[2]),
-  #                        beta_rain = rnorm(31, coeffs[3], params_se[3]),
-  #                        beta_rainLag = rnorm(31, coeffs[4], params_se[4]))
-  # )
+  #### get param uncertainty
+  ##get param distribtuions for parameter uncertainity
+  param_df <- data.frame(beta_int = rnorm(31, coeffs[1], params_se[1]),
+                         beta_rainLag = rnorm(31, coeffs[2], params_se[2])
+  )
+  
+  ####get process uncertainty
+  #find residuals
+  fit_df_noNA <- na.omit(fit_df)
+  mod <- predict(fdom_model, data = fit_df_noNA)
+  residuals <- mod - fit_df_noNA$fDOM_QSU_mean
+  sigma <- sd(residuals, na.rm = TRUE) # Process Uncertainty Noise Std Dev.; this is your sigma
+  
+  
   
   
   #-------------------------------------
@@ -138,7 +145,7 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
                               Horizon = date - reference_datetime,
                               forecast_variable = var,
                               value = as.double(NA),
-                              uc_type = "noaa") 
+                              uc_type = "total") 
 
   
   #-------------------------------------
@@ -159,8 +166,9 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
     
 
     #run model
-    fdom_pred$value <- coeffs[1] + (met_precip_lag_driv$rain10daysum * coeffs[2]) 
-    
+    fdom_pred$value <- param_df$beta_int + (met_precip_lag_driv$rain10daysum * param_df$beta_rainLag) +
+      rnorm(n = 31, mean = 0, sd = sigma) #process uncert
+
     #insert values back into the forecast dataframe
     forecast_full_unc <- forecast_full_unc %>%
       rows_update(fdom_pred, by = c("date","ensemble_member","forecast_variable","uc_type"))
