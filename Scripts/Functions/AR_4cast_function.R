@@ -153,7 +153,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
   
   
   ####look at set up for IC uncert 
-  ic_sd <- 0.1 #adpating from HLWs temp 4cast using 0.1 and detection limit on fDOM sensor being 0.07 QSU
+  ic_sd <- 0.07 #detection limit on fDOM sensor being 0.07 QSU
   # ic_uc <- rnorm(n = 30, mean = mean(fcr_fdom_2023$observation, na.rm = T), sd = ic_sd)
   # hist(ic_uc)
   
