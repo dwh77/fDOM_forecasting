@@ -68,8 +68,7 @@ Set up directories to hold forecasts
 FCR
 ```{r}
 ##set up function inputs
-#start forecasts at 12dec22 to line up w/ other forecasts
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-12"), by = "day")
+forecast_date <- seq(ymd("2023-04-13"), ymd("2024-08-11"), by = "day")
 
 model_id <- "fDOM_MetRegression_dwh"
 var <- "fDOM_QSU_mean"
@@ -79,7 +78,7 @@ project_id <- "vera4cast"
 n_members <- 31
 forecast_horizon <- 16
 
-calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
+calibration_start_date <- ymd("2023-03-13") #ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
 
 targets_df <- fcr_waterQ
 noaa_4cast <- fcr_bvr_noaa_daily
@@ -113,8 +112,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
 BVR
 ```{r}
 ##set up function inputs
-#start forecasts at 12dec22 to line up w/ other forecasts
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-12"), by = "day")
+forecast_date <- seq(ymd("2023-04-13"), ymd("2024-08-11"), by = "day")
 
 model_id <- "fDOM_MetRegression_dwh"
 var <- "fDOM_QSU_mean"
@@ -124,7 +122,7 @@ project_id <- "vera4cast"
 n_members <- 31
 forecast_horizon <- 16
 
-calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
+calibration_start_date <- ymd("2023-03-13") #ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
 
 targets_df <- bvr_waterQ
 noaa_4cast <- fcr_bvr_noaa_daily
@@ -157,8 +155,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
 CCR
 ```{r}
 ##set up function inputs
-#start forecasts at 12dec22 to line up w/ other forecasts
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-12"), by = "day")
+forecast_date <- seq(ymd("2023-04-13"), ymd("2024-08-11"), by = "day")
 
 model_id <- "fDOM_MetRegression_dwh"
 var <- "fDOM_QSU_mean"
@@ -168,7 +165,7 @@ project_id <- "vera4cast"
 n_members <- 31
 forecast_horizon <- 16
 
-calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
+calibration_start_date <- ymd("2023-03-13") #ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
 
 targets_df <- ccr_waterQ
 noaa_4cast <- ccr_noaa_daily

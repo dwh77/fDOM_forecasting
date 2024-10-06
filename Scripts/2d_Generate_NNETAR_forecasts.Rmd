@@ -21,7 +21,9 @@ source('./Functions/NNETAR_4cast_function.R')
 target data 
 ```{r}
 ### Read in df 
-targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv") |> 
+    filter(datetime >= ymd("2023-03-13")) #filter to same starting point as AR and met regression
+
 
 ```
 
@@ -42,7 +44,7 @@ Set up directories to hold forecasts
 
 ```{r}
 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-26"), by = "day") #ymd("2022-12-12), ymd("2024-08-26")
+forecast_date <- seq(ymd("2023-04-13"), ymd("2024-08-11"), by = "day") 
 
 var <- "fDOM_QSU_mean"
 targets_df <- targets_fdom

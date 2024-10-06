@@ -269,7 +269,7 @@ All_Scores <- rbind(AR_scores, RainLag_scores, MetRegress_scores, nnetar_scores,
   mutate(model_id = ifelse(model_id %in% c("example_fDOM_AR_dwh", "fDOM_AR_dwh"), "fDOM_AR_dwh", model_id)
          ) #fix different model_id names for AR models (remove example)
 
-write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores.csv", row.names = F)
+write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores_6oct24.csv", row.names = F)
 
 ```
 
