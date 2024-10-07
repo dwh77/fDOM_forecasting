@@ -31,6 +31,55 @@ Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_6oct24.
 
 ```
 
+## Skill plots 
+
+```{r}
+#Persist
+skill_persist <- Scored_forecasts |> 
+  select(reference_datetime, datetime, Horizon, site_id, model_id, crps) |> 
+  pivot_wider(names_from = model_id, values_from = crps) |> 
+  mutate(Skill_AR = 1-(AR/Persist),
+         Skill_NNETAR = 1-(NNETAR/Persist),
+         Skill_MetRegress = 1-(MetRegress/Persist),
+         Skill_RainLag = 1-(RainLag/Persist)) |> 
+  select(site_id, Horizon, Skill_AR:Skill_RainLag) |> 
+  pivot_longer(-c(1:2)) |> 
+  group_by(site_id, Horizon, name) |> 
+  summarise(value = mean(value, na.rm = T)) |> 
+  ggplot(aes(x = Horizon, y = value, color = name))+
+  geom_hline(yintercept = 0, linewidth =1.2)+
+  geom_line(linewidth = 1.2)+
+  facet_wrap(~site_id, nrow = 1)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  labs(x = "Horizon", color = "model", title = "Skill_persist")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+#Clim
+skill_clim <- Scored_forecasts |> 
+  select(reference_datetime, datetime, Horizon, site_id, model_id, crps) |> 
+  pivot_wider(names_from = model_id, values_from = crps) |> 
+  mutate(Skill_AR_C = 1-(AR/Clim),
+         Skill_NNETAR_C = 1-(NNETAR/Clim),
+         Skill_MetRegress_C = 1-(MetRegress/Clim),
+         Skill_RainLag_C = 1-(RainLag/Clim)) |> 
+  select(site_id, Horizon, Skill_AR_C:Skill_RainLag_C) |> 
+  pivot_longer(-c(1:2)) |> 
+  group_by(site_id, Horizon, name) |> 
+  summarise(value = mean(value, na.rm = T)) |> 
+  ggplot(aes(x = Horizon, y = value, color = name))+
+  geom_hline(yintercept = 0, linewidth =1.2)+
+  geom_line(linewidth = 1.2)+
+  facet_wrap(~site_id, nrow = 1)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  labs(x = "Horizon", color = "model", title = "Skill_climatology")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+skill_persist / skill_clim
+
+```
+
 
 ## Summary Plots over Horizons
 
