@@ -1,5 +1,7 @@
 #### plotting timeseries of all three reservoirs 
 library(tidyverse)
+library(ggpmisc) #stat poly line
+
 
 
 #### Get data ----
@@ -150,26 +152,71 @@ fcrTC |> ggplot(aes(x = Date))+
   geom_point(aes(y = fdom, color = "fdom"))+
   geom_point(aes(y = temp, color = "temp"))
 
-p <- -0.015
+p <- -0.02
 
 fcrTC <- fcrTC |> 
   mutate(fdom_TC = fdom/(1 + (p*(temp - 20))   ),
          fdom_TCundo = fdom*(1 + (p*(temp - 20))   )
   )
 
-fcrTC |> ggplot(aes(x = Date))+
+fcrTC  |> 
+  ggplot(aes(x = Date))+
+  geom_point(aes(y = fdom, color = "fdom_raw"))+
+  geom_point(aes(y = fdom_TC, color = "fdom_TC"))
+  #geom_point(aes(y = fdom_TCundo, color = "fdom_TCundo"))+
+  #geom_point(aes(y = temp, color = "temp"))
+
+
+
+fcrTC |> mutate(year = year(Date), doy = yday(Date)) |> 
+  ggplot(aes(x = doy))+
   geom_point(aes(y = fdom, color = "fdom_raw"))+
   geom_point(aes(y = fdom_TC, color = "fdom_TC"))+
-  geom_point(aes(y = fdom_TCundo, color = "fdom_TCundo"))+
-  geom_point(aes(y = temp, color = "temp"))
+  facet_wrap(~year, ncol = 1)
+
+fcrTC |> mutate(year = year(Date), doy = yday(Date)) |>
+  mutate(resid = fdom_TC - fdom) |> 
+  ggplot(aes(x = doy, y = resid))+
+  geom_point()+
+  facet_wrap(~year, ncol = 1)
 
 
+summary(fcrTC$fdom)
 
+summary(fcrTC$fdom_TC)
 
+#DOC 
+doc <- read.csv("https://pasta.lternet.edu/package/data/eml/edi/199/12/a33a5283120c56e90ea414e76d5b7ddb" )
 
+fcrdoc <- doc |> 
+  filter(Reservoir == "FCR",
+         Site == 50, Depth_m == 1.6, !is.na(DOC_mgL)) |> #filter(DOC_mgL <10) |> 
+  #mutate(Year = year(DateTime)) |> filter(Year == 2023) |> 
+  select(DateTime, DOC_mgL) |> mutate(DateTime = as.Date(DateTime))
 
+fcrTC |> 
+  ggplot(aes(x = temp, y = fdom ))+
+  geom_point()+ ggtitle("Temp ~fdom")+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = temp, y = fdom, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
 
+left_join(fcrdoc, fcrTC, by = c("DateTime" = "Date")) |> 
+  ggplot(aes(x = fdom_TC, y = DOC_mgL ))+
+  geom_point()+ ggtitle("TempCorr")+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = fdom_TC, y = DOC_mgL, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
 
+left_join(fcrdoc, fcrTC, by = c("DateTime" = "Date")) |> 
+  ggplot(aes(x = fdom, y = DOC_mgL ))+
+  geom_point()+ ggtitle("Raw")+
+  stat_poly_line(method = "lm", linewidth = 2)+
+  stat_poly_eq(formula=y~x, label.x = "left", label.y="top", parse=TRUE, inherit.aes = F,
+               aes(x = fdom, y = DOC_mgL, label=paste(..adj.rr.label..,..p.value.label..,sep="~~~"),size=3))+
+  theme_bw()
 
 
 #### a ----

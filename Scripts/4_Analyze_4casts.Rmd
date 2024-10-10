@@ -14,6 +14,8 @@ library(tidyverse)
 ```{r}
 #read in scores 
 Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_6oct24.csv") |> 
+  filter(reference_datetime >= ymd("2023-07-31"),
+         reference_datetime <= ymd("2024-08-01")) |> 
   mutate(Horizon = datetime - reference_datetime) |> 
   filter(Horizon > 0, Horizon < 17) |> 
   mutate(model_id = ifelse(model_id == "fable_persistence", "Persist", model_id),
