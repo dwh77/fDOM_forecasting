@@ -636,7 +636,9 @@ example_forecast_data |>
   # ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
   guides(fill = guide_legend(nrow = 1))+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
+
 
 
 ####Week before and observations in forecast horizon 
@@ -653,7 +655,8 @@ example_forecast_data |>
   # ylim(0,40)+
   guides(x =  guide_axis(angle = 30)) +
   guides(fill = guide_legend(nrow = 1))+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
 
 
 
@@ -683,15 +686,16 @@ example_4cast <- example_forecast_data |>
   geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
   geom_line(aes(x = datetime, y = mean, color = model_id))+
   facet_wrap(~site_id, scales = "free", nrow = 3) +
-  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
   # ylim(0,40)+
   # guides(x =  guide_axis(angle = 30)) +
-  guides(fill = guide_legend(nrow = 2))+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 18), legend.text = element_text(size =8))
+  guides(fill = guide_legend(nrow = 6))+
+  theme_bw() + #theme(legend.position = "right", text = element_text(size = 14), legend.text = element_text(size =12))+
+  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
 
 example_4cast
 
-#ggsave("../Figures/Example_4cast.png", example_4cast, width = 2.8, height = 5.2, units = "in")
+#ggsave("../Figures/Example_4cast2.png", example_4cast, width = 5.5, height = 3.5, units = "in")
 
 
 ```
