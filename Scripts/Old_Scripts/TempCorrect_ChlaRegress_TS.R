@@ -24,28 +24,67 @@ ccrfull <- rbind(ccr, ccr_L1)
 
 targets_fdom <- targets |> 
   mutate(Date = as.Date(datetime)) |> 
-  filter(variable %in% c("fDOM_QSU_mean")) |> 
-  select(Date, site_id, observation) |> 
-  rename(fdom = observation)
+  filter(depth_m %in% c(1.6, 1.5),
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean")) |> 
+  select(Date, site_id, variable, observation) |> 
+  pivot_wider(names_from = variable, values_from = observation)
+
+targets |> 
+  mutate(Date = as.Date(datetime)) |> 
+  filter(depth_m %in% c(1.6, 1.5),
+         variable %in% c("fDOM_QSU_mean", "Temp_C_mean", "Turbidity_FNU_mean")) |> 
+  select(Date, site_id, variable, observation) |> 
+  ggplot(aes(x = Date, y = observation))+
+  geom_point()+
+  facet_grid(variable~site_id, scales = "free_y")
+
 
 ccr_daily <- ccrfull |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
-  summarise(fdom = mean(EXOfDOM_QSU_1, na.rm = T)) |> 
+  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T),
+            fDOM_RFU_mean = mean(EXOfDOM_RFU_1, na.rm = T),
+            Temp_C_mean = mean(EXOTemp_C_1, na.rm = T)) |> 
   mutate(site_id = "ccre")
+
+ccr_daily |> 
+  pivot_longer(-c(Date, site_id)) |> 
+  ggplot(aes(x = Date, y = value))+
+  geom_point()+
+  facet_wrap(~name, ncol = 1, scales = "free_y")
 
 
 fdom <- rbind(targets_fdom, ccr_daily)
 
+#Raw fDOM
 fdom |> 
-  filter(Date > ymd("2022-12-01")) |> 
-  #        Date < ymd("2024-02-01")) |> 
-ggplot(aes(x = Date, y = fdom, color = site_id))+
+  #filter(Date > ymd("2022-12-01")) |> 
+ggplot(aes(x = Date, y = fDOM_QSU_mean, color = site_id))+
   geom_point()+
-  geom_vline(aes(xintercept = ymd("2022-12-12")))+
-  geom_vline(aes(xintercept = ymd("2024-01-31")))+
-  labs(y = "fDOM (QSU)")+
-  theme_classic() + theme(legend.position = "top", text = element_text(size = 18))
+  ylim(0,30)+ ggtitle("Raw fDOM")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+#Temp Corr
+p <- -0.01
+
+fdom |> 
+  #filter(Date > ymd("2022-12-01")) |> 
+  mutate(fdom_TC = fDOM_QSU_mean/(1 + (p*(Temp_C_mean - 20)) )   ) |> 
+ggplot(aes(x = Date, y = fdom_TC, color = site_id))+
+  geom_point()+
+  ylim(0,30)+ ggtitle("fDOM TC; p = -0.01")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+p <- -0.03
+
+fdom |> 
+  #filter(Date > ymd("2022-12-01")) |> 
+  mutate(fdom_TC = fDOM_QSU_mean/(1 + (p*(Temp_C_mean - 20)) )   ) |> 
+  ggplot(aes(x = Date, y = fdom_TC, color = site_id))+
+  geom_point()+
+  ylim(0,30)+ ggtitle("fDOM TC; p = -0.03")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
 
 
 #### fdom ~ chla correlation ----
