@@ -1,0 +1,767 @@
+---
+title: "Untitled"
+author: "Dexter Howard"
+date: "2024-09-06"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(patchwork)
+```
+
+## Read in data and format 
+
+```{r}
+#read in scores 
+Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_6oct24.csv") |> 
+  filter(reference_datetime >= ymd("2023-07-31"),
+         reference_datetime <= ymd("2024-08-01")) |> 
+  mutate(Horizon = datetime - reference_datetime) |> 
+  filter(Horizon > 0, Horizon < 17) |> 
+  mutate(model_id = ifelse(model_id == "fable_persistence", "Persistence", model_id),
+         model_id = ifelse(model_id == "climatology", "DOY", model_id),
+         model_id = ifelse(model_id == "fDOM_AR_dwh", "TS_AR", model_id),
+         model_id = ifelse(model_id == "fDOM_RainLag_dwh", "TS_Rain", model_id),
+         model_id = ifelse(model_id == "fDOM_MetRegression_dwh", "TS_Met", model_id),
+         model_id = ifelse(model_id == "fableNNETAR", "ML", model_id)
+         ) |>  #update model names for plotting
+    mutate(model_type = ifelse(model_id %in% c("Persistence", "DOY"), "Baseline", "Data Driven")
+         ) #grouping by model types
+
+
+#set model colors and shapes
+model_colors <- c("TS_AR" = "#CC6677", "DOY" = "#88CCEE", "Persistence" = "#DDCC77", "ML" = "#117733", "TS_Rain" = "#332288", "TS_Met" = "#888888")
+model_shape <- c("Data Driven" = 1, "Baseline" = 2)
+
+```
+
+
+## AGU
+
+RMSE
+
+```{r}
+##RMSE
+RMSE_AGU <- Scored_forecasts |> 
+  #filter(!model_id %in% c("Clim", "Persist")) |> 
+  group_by(Horizon, site_id, model_id, model_type) |> 
+  # filter(!model_type %in% c("Null")) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 1)) |>
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ #, linetype = model_type
+  geom_line(linewidth = 3)+
+  #geom_point(size = 3)+
+  facet_wrap(~site_id, scales = "free_y", ncol = 1)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  ylim(0.5,5.2)+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 32))+
+  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
+
+ggsave("../Figures/AGU_RMSE.png", RMSE_AGU, height = 18, width = 14.2, units = "in")
+
+
+#by season RMSE
+AGU_RMSE_Season <- Scored_forecasts |> 
+  mutate(month = month(datetime),
+         Season = ifelse(month %in% c(3,4,5), "Spring", NA),
+         Season = ifelse(month %in% c(6,7,8), "Summer", Season),
+         Season = ifelse(month %in% c(9,10,11), "Fall", Season),
+         Season = ifelse(month %in% c(1,2,12), "Winter", Season)
+         ) |> 
+  filter(Season == "Summer") |> 
+  filter(!is.na(observation)) |> 
+  # filter(!model_id %in% c("Clim", "Persist")) |> 
+  #filter(site_id == "fcre") |> 
+  group_by(Horizon, site_id, model_id, Season, model_type) |> 
+  # filter(!model_type %in% c("Null")) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 1)) |>
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ #, linetype = model_type
+  geom_line(linewidth = 1.5)+
+  #geom_point(size = 3)+
+  facet_grid(site_id~Season)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 32))+
+  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
+
+
+
+ggsave("../Figures/AGU_RMSE_Season.png", AGU_RMSE_Season, height = 9, width = 17.2, units = "in")
+
+
+
+## why is fcr summer clim not straight
+Scored_forecasts |> 
+  filter(Horizon == 1) |> 
+  filter(site_id == "fcre") |> 
+  mutate(month = month(datetime)) |> 
+  filter(month == 8) |> 
+  ggplot(aes(x = datetime, y = observation, color = site_id))+
+  geom_point()
+
+##theres a few missing observation in august 2023 for fcr, could it be just these three days????
+
+
+```
+
+RMSE skill
+
+```{r}
+#all
+skill_persist_rmse <- Scored_forecasts |> 
+   group_by(site_id, model_id, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+             MAE = mean(abs(mean - observation), na.rm = T),
+            CRPS = mean(crps, na.rm = T),
+            SD = mean(sd, na.rm = T)
+            ) |> 
+  select(Horizon, site_id, model_id, RMSE) |> 
+  pivot_wider(names_from = model_id, values_from = RMSE) |> 
+  mutate(Skill_AR = 1-(AR/Persist),
+         Skill_NNETAR = 1-(NNETAR/Persist),
+         Skill_MetRegress = 1-(MetRegress/Persist),
+         Skill_RainLag = 1-(RainLag/Persist)) |> 
+  select(site_id, Horizon, Skill_AR:Skill_RainLag) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = Horizon, y = value, color = name))+
+  geom_hline(yintercept = 0, linetype = 2, linewidth =1.2)+
+  geom_line(linewidth = 3)+
+  # ylim(-2.5,1)+
+  facet_wrap(~site_id, nrow = 1)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  scale_color_manual(values = c("Skill_AR" = "#CC6677",
+                              "Skill_NNETAR" = "#117733", "Skill_RainLag" = "#332288", "Skill_MetRegress" = "#888888"))+
+  labs(x = "Horizon", y = "Forecast Skill", color = "model")+
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 32))
+
+ggsave("../Figures/AGU_RMSEskill.png", skill_persist_rmse, height = 8.3, width = 17.3, units = "in")
+
+
+
+#by season 
+Scored_forecasts |> 
+     mutate(month = month(datetime),
+         Season = ifelse(month %in% c(3,4,5), "Spring", NA),
+         Season = ifelse(month %in% c(6,7,8), "Summer", Season),
+         Season = ifelse(month %in% c(9,10,11), "Fall", Season),
+         Season = ifelse(month %in% c(1,2,12), "Winter", Season)
+         ) |> 
+   group_by(site_id, model_id, Horizon, Season) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+             MAE = mean(abs(mean - observation), na.rm = T),
+            CRPS = mean(crps, na.rm = T),
+            SD = mean(sd, na.rm = T)
+            ) |> 
+  select(Horizon, site_id, model_id, Season, RMSE) |> 
+  pivot_wider(names_from = model_id, values_from = RMSE) |> 
+  mutate(Skill_AR = 1-(AR/Persist),
+         Skill_NNETAR = 1-(NNETAR/Persist),
+         Skill_MetRegress = 1-(MetRegress/Persist),
+         Skill_RainLag = 1-(RainLag/Persist)) |> 
+  select(site_id, Horizon, Season, Skill_AR:Skill_RainLag) |> 
+  pivot_longer(-c(1:3)) |> 
+  filter(!name %in% c("Skill_MetRegress", "Skill_RainLag")) |> 
+  ggplot(aes(x = Horizon, y = value, color = name))+
+  geom_hline(yintercept = 0, linewidth =1, linetype = 2)+
+  geom_line(linewidth = 1.5)+
+  #ylim(-2.2,1)+
+  facet_grid(site_id~Season, scales = "fixed")+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  labs(x = "Horizon", color = "model")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+
+```
+
+
+
+## MS plots 
+
+Fig 5. RMSE over horizon
+
+```{r}
+#just RMSE over horizon by reservoir and model
+Scored_forecasts |> 
+  group_by(Horizon, site_id, model_id, model_type) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 1)) |>
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ #, linetype = model_type
+  geom_line(linewidth = 1.2)+
+  facet_wrap(~site_id, scales = "free_y", ncol = 3)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  ylim(0.5,5.2)+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
+
+
+```
+
+SI to Fig 5. faceted metrics over horizon
+
+```{r}
+#RMSE, CRPS, MAE, and SD over horizon by model type and reservoir
+Scored_forecasts |> 
+   group_by(site_id, model_id, model_type, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+             #MAE = mean(abs(mean - observation), na.rm = T),
+             CRPS = mean(crps, na.rm = T),
+             SD = mean(sd, na.rm = T)
+            ) |> 
+  pivot_longer(-c(1:4)) |> 
+  ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
+  geom_line(linewidth = 1.2)+
+  facet_grid(name~site_id, scales = "free_y")+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
+
+```
+
+Fig 6. Skill and associated SI figure 
+
+```{r}
+
+#### Set up data frames by metric and null 
+
+#CRPS Persist
+skill_crps_persist <- Scored_forecasts |> 
+  select(reference_datetime, datetime, Horizon, site_id, model_id, crps) |> 
+  pivot_wider(names_from = model_id, values_from = crps) |> 
+  mutate(Skill_AR_crps_P = 1-(TS_AR/Persistence),
+         Skill_NNETAR_crps_P = 1-(ML/Persistence),
+         Skill_MetRegress_crps_P = 1-(TS_Met/Persistence),
+         Skill_RainLag_crps_P = 1-(TS_Rain/Persistence)) |> 
+  select(site_id, Horizon, Skill_AR_crps_P:Skill_RainLag_crps_P) |> 
+  pivot_longer(-c(1:2)) |> 
+  group_by(site_id, Horizon, name) |> 
+  summarise(value = mean(value, na.rm = T))
+
+#CRPS Clim
+skill_crps_clim <- Scored_forecasts |> 
+  select(reference_datetime, datetime, Horizon, site_id, model_id, crps) |> 
+  pivot_wider(names_from = model_id, values_from = crps) |> 
+  mutate(Skill_AR_crps_C = 1-(TS_AR/DOY),
+         Skill_NNETAR_crps_C = 1-(ML/DOY),
+         Skill_MetRegress_crps_C = 1-(TS_Met/DOY),
+         Skill_RainLag_crps_C = 1-(TS_Rain/DOY)) |> 
+  select(site_id, Horizon, Skill_AR_crps_C:Skill_RainLag_crps_C) |> 
+  pivot_longer(-c(1:2)) |> 
+  group_by(site_id, Horizon, name) |> 
+  summarise(value = mean(value, na.rm = T))
+
+#RMSE Persist
+skill_rmse_persist <- Scored_forecasts |> 
+   group_by(site_id, model_id, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)
+            ) |> 
+  select(Horizon, site_id, model_id, RMSE) |> 
+  pivot_wider(names_from = model_id, values_from = RMSE) |> 
+  mutate(Skill_AR_rmse_P = 1-(TS_AR/Persistence),
+         Skill_NNETAR_rmse_P = 1-(ML/Persistence),
+         Skill_MetRegress_rmse_P = 1-(TS_Met/Persistence),
+         Skill_RainLag_rmse_P = 1-(TS_Rain/Persistence)) |> 
+  select(site_id, Horizon, Skill_AR_rmse_P:Skill_RainLag_rmse_P) |> 
+  pivot_longer(-c(1:2))
+
+#RMSE Clim
+skill_rmse_clim <- Scored_forecasts |> 
+   group_by(site_id, model_id, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)
+            ) |> 
+  select(Horizon, site_id, model_id, RMSE) |> 
+  pivot_wider(names_from = model_id, values_from = RMSE) |> 
+  mutate(Skill_AR_rmse_C = 1-(TS_AR/DOY),
+         Skill_NNETAR_rmse_C = 1-(ML/DOY),
+         Skill_MetRegress_rmse_C = 1-(TS_Met/DOY),
+         Skill_RainLag_rmse_C = 1-(TS_Rain/DOY)) |> 
+  select(site_id, Horizon, Skill_AR_rmse_C:Skill_RainLag_rmse_C) |> 
+  pivot_longer(-c(1:2))
+
+
+#### Put data frames together 
+skill_df <- rbind(skill_crps_clim, skill_crps_persist, skill_rmse_clim, skill_rmse_persist) |> 
+  mutate(name_a = name) |>  #make a copy of name for reference
+  select(site_id, Horizon, name_a, name, value) |> 
+  tidyr::separate(name, into = c("Skill", "model_id", "metric", "Null"), sep = "_") |>  #break apart name column for grouping 
+  mutate(Null = ifelse(Null == "P", "Skill_Peristence", "Skill_Climatology")) |> 
+  mutate(model_idA = ifelse(model_id == "AR", "TS_AR", NA),
+         model_idA = ifelse(model_id == "NNETAR", "ML", model_idA),
+         model_idA = ifelse(model_id == "MetRegress", "TS_Met", model_idA),
+         model_idA = ifelse(model_id == "RainLag", "TS_Rain", model_idA)) #fix model names to match above
+
+
+
+
+#### Make plots 
+#Skill CRPS 
+skill_crps_plot <- skill_df |> 
+  filter(metric == "crps") |> 
+  ggplot(aes(x = Horizon, y = value, color = model_idA))+
+  geom_line()+
+  facet_grid(Null~site_id, scales = "free_y")+
+  geom_hline(yintercept = 0, linewidth =1.2)+
+  geom_line(linewidth = 1.2)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  labs(x = "Horizon", color = "model", title = "b) CRPS Skill")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_manual(values = model_colors)
+
+#Skill RMSE
+skill_rmse_plot <- skill_df |> 
+  filter(metric == "rmse") |> 
+  ggplot(aes(x = Horizon, y = value, color = model_idA))+
+  geom_line()+
+  facet_grid(Null~site_id, scales = "free_y")+
+  geom_hline(yintercept = 0, linewidth =1.2)+
+  geom_line(linewidth = 1.2)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  labs(x = "Horizon", color = "model", title = "a) RMSE Skill")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
+  scale_color_manual(values = model_colors)
+
+
+#panel 
+
+skill_rmse_plot | skill_crps_plot
+
+
+
+```
+
+
+
+Fig 7. Seasonal RMSE
+
+
+```{r}
+#make seasons groupings 
+Scored_forecasts_seasons <- Scored_forecasts |> 
+  mutate(Julian = yday(datetime),
+         Season = ifelse(Julian >= 54 & Julian <= 68, "Spring", NA),
+         Season = ifelse(Julian >= 69 & Julian <= 307, "Summer", Season),
+         Season = ifelse(Julian >= 308 & Julian <= 353, "Fall", Season),
+         Season = ifelse(Julian >= 354 | Julian <= 53, "Winter", Season)
+         ) |> 
+   mutate(month = month(datetime),
+         Season2 = ifelse(month %in% c(3,4,5), "Spring", NA),
+         Season2 = ifelse(month %in% c(6,7,8), "Summer", Season2),
+         Season2 = ifelse(month %in% c(9,10,11), "Fall", Season2),
+         Season2 = ifelse(month %in% c(1,2,12), "Winter", Season2)
+         ) 
+
+#columns by site_id
+Scored_forecasts_seasons|> 
+  group_by(Horizon, site_id, model_id, model_type, Season2) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)
+            ) |>
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ 
+  geom_line(linewidth = 1.2)+
+  facet_grid(Season2~site_id, scales = "free_y")+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  labs(x = "Horizon", color = "Model_id", title = "Seasons months")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = model_colors)+ scale_linetype_manual(values = model_shape)
+
+#columns by season
+Scored_forecasts_seasons |> 
+  group_by(Horizon, site_id, model_id, model_type, Season2) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |>
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ # color = model_id
+  geom_line(linewidth = 1.2)+
+  facet_grid(site_id~Season2)+
+  scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
+  labs(x = "Horizon", y = "RMSE (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = model_colors)+ scale_linetype_manual(values = model_shape)
+
+
+
+
+```
+
+
+
+
+
+
+## TS w/ ribbon as forecast - Fig 8?
+
+```{r}
+#### FCR All 6 models w/ 1, 8, 16 horizons
+
+for (i in unique(Scored_forecasts$model_id)) {
+  print(i)
+  
+  fig <- Scored_forecasts |> 
+  filter(model_id == i,
+         Horizon %in% c(1,8,16),
+         site_id == 'fcre') |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_wrap(~factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead")), ncol = 1, scales = "free_y")+
+  scale_x_date(date_breaks = "2 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = i)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  
+  print(fig)
+  
+}
+
+
+#### FCR All models faceted
+Scored_forecasts |> 
+  filter(Horizon %in% c(1,8,16),
+         site_id == 'fcre') |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation), alpha = 0.5)+
+    ylim(5,30)+
+  facet_grid(factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead"))~model_id, scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "FCR")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+
+
+### All reservoirs and models at 1 day 
+Scored_forecasts |> 
+  filter(!model_id %in% c("Clim", "Persist")) |> 
+  filter(Horizon %in% c(1)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_grid(site_id~model_id, scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  
+
+##show both time and reservoir for select models 
+Scored_forecasts |> 
+  filter(model_id %in% c("AR", "MetRegress")) |> 
+  filter(Horizon %in% c(1,8,16)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean, color = model_id))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_grid(Horizon_label~site_id, scales = "free_y")
+
+
+########## By Res; best so far ###########################3
+
+fcrV1 <- Scored_forecasts |> 
+  filter(model_id %in% c("AR", "MetRegress")) |> 
+  filter(site_id == "fcre") |> 
+  filter(Horizon %in% c(1,8,16)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_grid(factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead"))~model_id, scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "FCR")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+bvrV1 <- Scored_forecasts |> 
+  filter(model_id %in% c("AR", "MetRegress")) |> 
+  filter(site_id == "bvre") |> 
+  filter(Horizon %in% c(1,8,16)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_grid(factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead"))~model_id, scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "BVR")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+ccrV1 <- Scored_forecasts |> 
+  filter(model_id %in% c("AR", "MetRegress")) |> 
+  filter(site_id == "ccre") |> 
+  filter(Horizon %in% c(1,8,16)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  ggplot()+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  geom_point(aes(x = as.Date(datetime), y = observation))+
+  facet_grid(factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead"))~model_id, scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "CCR")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+
+
+fcrV1 | bvrV1 | ccrV1
+
+  
+
+
+```
+
+
+
+## Residual timeseries
+
+```{r}
+#resid 
+for (i in unique(Scored_forecasts$model_id)) {
+  fig <- Scored_forecasts |> 
+  filter(model_id == i,
+         Horizon %in% c(1,8,16)) |> 
+  mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA),
+         Horizon_label = ifelse(Horizon == 8, "8 days ahead", Horizon_label),
+         Horizon_label = ifelse(Horizon == 16, "16 days ahead", Horizon_label)) |> 
+  mutate(resid = mean - observation) |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = resid))+
+  facet_grid(site_id~factor(Horizon_label, levels = c("1 day ahead", "8 days ahead", "16 days ahead")), scales = "free_y")+
+  scale_x_date(date_breaks = "6 month", date_labels = "%b %y" )+
+  ylim(-10, 10)+
+  labs(x = element_blank(), y = "Resid (mean predicted - observered)", title = i)+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+  
+    print(fig)
+
+      }# end for loop
+
+```
+
+
+
+## Example forecast plots
+
+```{r}
+####just forecast horizon w/ ribbons and observations
+Scored_forecasts |> 
+  filter(reference_datetime == ymd("2024-07-01")) |> 
+  ggplot()+
+  #geom_point(aes(datetime, observation)) +
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, col = model_id))+
+  facet_wrap(~site_id, scales = "free") +
+  # geom_vline(xintercept = ymd("2023-04-16"))
+  labs(x = 'datetime', y = 'fDOM (QSU)') +
+  guides(x =  guide_axis(angle = 30)) +
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))
+
+
+#### Plot week before and no observations in forecast
+#set up data
+weekbefore <- Scored_forecasts |> 
+    filter(datetime <= ymd("2024-07-15"),
+           datetime >= ymd("2024-07-15") - 7) |> 
+  select(datetime, observation, model_id, site_id)
+
+example_forecast_data <- Scored_forecasts |> 
+  filter(reference_datetime == ymd("2024-07-15"))
+  
+#plot it
+example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, color = model_id))+
+  facet_wrap(~site_id, scales = "fixed") +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  # ylim(0,40)+
+  guides(x =  guide_axis(angle = 30)) +
+  guides(fill = guide_legend(nrow = 1))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+####Week before and observations in forecast horizon 
+example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |> 
+  #mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, color = model_id))+
+  facet_wrap(~site_id, scales = "fixed") +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  # ylim(0,40)+
+  guides(x =  guide_axis(angle = 30)) +
+  guides(fill = guide_legend(nrow = 1))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+
+####Facet by site and model 
+# example_forecast_data |> 
+#   plyr::rbind.fill(weekbefore) |> 
+#   #mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+#   ggplot()+
+#   geom_point(aes(datetime, observation)) +
+#   geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+#   geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+#   geom_line(aes(x = datetime, y = mean))+
+#   facet_grid(site_id~model_id, scales = "free") +
+#   labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
+#   # ylim(0,40)+
+#   guides(x =  guide_axis(angle = 30)) +
+#   theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+#change orientation for conceptual figure
+example_4cast <- example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, color = model_id))+
+  facet_wrap(~site_id, scales = "free", nrow = 3) +
+  labs(x = 'datetime', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  # ylim(0,40)+
+  # guides(x =  guide_axis(angle = 30)) +
+  guides(fill = guide_legend(nrow = 2))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18), legend.text = element_text(size =8))
+
+example_4cast
+
+ggsave("../Figures/Example_4cast.png", example_4cast, width = 2.8, height = 5.2, units = "in")
+
+
+```
+
+
+
+## Observed fDOM TS
+
+```{r}
+#all on one plot
+Scored_forecasts |> 
+  filter(Horizon == 1,
+         datetime >= ymd("2023-03-13")) |> 
+  ggplot(aes(x = datetime, y = observation, color = site_id))+
+  geom_point()+
+  annotate(geom = "point", x = ymd("2023-11-01"), y = 26, shape = 15, size = 3, color = "#009E73", alpha = 0.7)+
+  annotate(geom = "point", x = ymd("2023-11-02"), y = 25.7, shape = 15, size = 3, color = "orange", alpha = 0.7)+
+  annotate(geom = "point", x = ymd("2023-11-14"), y = 26, shape = 15, size = 3, color = "skyblue", alpha = 0.7)+
+  annotate(geom = "point", x = ymd("2024-03-02"), y = 26, shape = 17, size = 3, color = "#009E73", alpha = 0.7)+
+  annotate(geom = "point", x = ymd("2024-03-01"), y = 26, shape = 17, size = 3, color = "orange", alpha = 0.7)+
+  annotate(geom = "point", x = ymd("2024-03-03"), y = 26, shape = 17, size = 3, color = "skyblue", alpha = 0.7)+
+  scale_x_date(date_breaks = "3 month", date_labels = "%b %y" )+
+  ylim(4,26)+
+  labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))+
+  scale_color_manual(values = c("fcre" = "#009E73", "bvre" = "orange", "ccre" = "skyblue"))
+
+#2023-03-13 is first day of CCR fDOM observed
+
+
+##faceted
+# Scored_forecasts |>
+#   filter(Horizon == 1) |>
+#   ggplot(aes(x = datetime, y = observation))+
+#   geom_point()+
+#   scale_x_date(date_breaks = "3 month", date_labels = "%b %y" )+
+#   facet_wrap(~site_id, scales = "fixed", ncol = 1)+
+#   labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
+#   theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+  
+  
+```
+
+
+Calculate turnover dates; FCR and BVR
+
+```{r}
+targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+
+##FCR 2023-11-01 mixes: 2024-03-02 re strats 
+fcre_turnover <- read_csv(targets_url) |> 
+  select(-project_id, -duration) |> 
+  filter(site_id == "fcre",
+         depth_m %in% c(0.1, 9)) |> 
+  filter(variable == "Temp_C_mean",
+         datetime > ymd("2023-04-13")) |> 
+  pivot_wider(names_from = depth_m, values_from = observation) |> 
+  rename(wtr_01 = 5,
+         wtr_9 =4) |> 
+  mutate(Temp_diff = wtr_01 - wtr_9)
+
+
+##BVR - 2023-11-01 mixes: 2024-03-02 re strats
+bvre_turnover <- read_csv(targets_url) |> 
+  select(-project_id, -duration) |> 
+    filter(variable == "Temp_C_mean",
+         datetime > ymd("2023-04-13"),
+         site_id == "bvre") |> 
+  filter(depth_m > 9 | depth_m < 1) |> 
+  pivot_wider(names_from = depth_m, values_from = observation) |> 
+  rename(wtr_01 = 5,
+         wtr_9 =4) |> 
+  mutate(Temp_diff = wtr_01 - wtr_9)
+
+```
+
+CCR
+
+```{r}
+ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
+ccrfull <- rbind(ccr_edi, ccr_L1)
+
+ccr_turnover <- ccrfull |> 
+  select(3:16) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  select(-c(1,7:12)) |> 
+  group_by(Date) |> 
+  summarise(across(everything(), list(mean))) |> 
+  filter(Date > ymd("2023-03-13")) |> 
+  mutate(T1_T13 = ThermistorTemp_C_1_1 - ThermistorTemp_C_13_1,
+         T2_T13 = ThermistorTemp_C_2_1 - ThermistorTemp_C_13_1,
+         T3_T13 = ThermistorTemp_C_3_1 - ThermistorTemp_C_13_1,
+         T4_T13 = ThermistorTemp_C_4_1 - ThermistorTemp_C_13_1,
+         T5_T13 = ThermistorTemp_C_5_1 - ThermistorTemp_C_13_1)
+
+
+#CCR mixes: 2023-11-14; restrats 2024-03-03
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
