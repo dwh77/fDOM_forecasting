@@ -228,7 +228,65 @@ fig5_SI_metrics_Horizon <- Scored_forecasts |>
 #ggsave("../Figures/fig5_SI_allmetrics_Horizon.png", fig5_SI_metrics_Horizon, height = 6, width = 6, units = "in")
 
 
+##summary of this data in a table for stats 
+#across reservoirs 
+Scored_forecasts |> 
+   group_by(site_id, model_id, model_type, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+             #MAE = mean(abs(mean - observation), na.rm = T),
+             CRPS = mean(crps, na.rm = T),
+             SD = mean(sd, na.rm = T)
+            ) |> 
+    pivot_longer(-c(1:4)) |>
+  filter(name == "SD") |> 
+  group_by( model_id, name) |> 
+  summarise(min = min(value, na.rm = T),
+            mean = mean(value, na.rm = T),
+            median = median(value, na.rm = T),
+            max = max(value, na.rm = T),
+            range = max - min
+            )
 
+#by reservoir
+Scored_forecasts |> 
+   group_by(site_id, model_id, model_type, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+             #MAE = mean(abs(mean - observation), na.rm = T),
+             CRPS = mean(crps, na.rm = T),
+             SD = mean(sd, na.rm = T)
+            ) |> 
+    pivot_longer(-c(1:4)) |>
+  filter(name == "RMSE") |> 
+  group_by(site_id, model_id, name) |> 
+  summarise(min = min(value, na.rm = T),
+            mean = mean(value, na.rm = T),
+            median = median(value, na.rm = T),
+            max = max(value, na.rm = T),
+            range = max - min
+            )
+
+#by reservoir no model ID
+Scored_forecasts |> 
+   group_by(site_id, model_id, model_type, Horizon) |> 
+   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+             #MAE = mean(abs(mean - observation), na.rm = T),
+             CRPS = mean(crps, na.rm = T),
+             SD = mean(sd, na.rm = T)
+            ) |> 
+    pivot_longer(-c(1:4)) |>
+  filter(name == "RMSE") |> 
+  group_by(site_id, name) |> 
+  summarise(min = min(value, na.rm = T),
+            mean = mean(value, na.rm = T),
+            median = median(value, na.rm = T),
+            max = max(value, na.rm = T),
+            range = max - min
+            )
+
+
+#horizon as well
+skill_df |> 
+  filter(model_id == "AR", Null == "Skill_Peristence", metric == "rmse")
 
 ```
 
@@ -414,6 +472,12 @@ rmse_season <- Scored_forecasts_seasons |>
 
 
 #ggsave("../Figures/rmse_season_MS.png", rmse_season, height = 5.5, width = 6.5, units = "in")
+
+
+Scored_forecasts_seasons |> 
+  group_by(model_id, Season2, site_id) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |> 
+  pivot_wider(names_from = Season2, values_from = RMSE)
 
 
 
