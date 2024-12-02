@@ -12,3 +12,6 @@ Data/Forecast_Outputs/MetRegress_4casts
 Data/Forecast_Outputs/NNETAR_4casts
 Data/Forecast_Outputs/Persist_4casts
 Data/Forecast_Outputs/RainLag_4casts
+Figures/
+Scripts/Functions/ARonly_4cast_function.R
+Scripts/Functions/NNETAR_enviDrivers_4cast_function.R
