@@ -60,6 +60,27 @@ RMSE_AGU <- Scored_forecasts |>
 
 #ggsave("../Figures/AGU_RMSE.png", RMSE_AGU, height = 18, width = 14.2, units = "in")
 
+## CRPS for print off
+
+crps_AGU <- Scored_forecasts |> 
+  mutate(site_id = ifelse(site_id == "bvre", "Beaverdam", site_id),
+         site_id = ifelse(site_id == "fcre", "Falling Creek", site_id),
+         site_id = ifelse(site_id == "ccre", "Carvins Cove", site_id)) |> 
+  group_by(Horizon, site_id, model_id, model_type) |> 
+  summarise(crps = mean(crps, na.rm = T)) |>
+  ggplot(aes(x = Horizon, y = crps, color = model_id, linetype = model_type))+ #, linetype = model_type
+  geom_line(linewidth = 2)+
+  facet_wrap(~site_id, scales = "free_y", ncol = 3)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+
+  labs(x = "Horizon", y = "CRPS (QSU)")+ guides(linetype = "none")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18)
+                     #legend.text = element_text(size = 8), legend.title = element_text(size = 8)
+                     )+
+  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
+
+#ggsave("../Figures/AGU_crps.png", crps_AGU, height = 4, width = 7, units = "in")
+
+
 
 #by season RMSE
 AGU_RMSE_Season <- Scored_forecasts |> 
@@ -86,9 +107,7 @@ AGU_RMSE_Season <- Scored_forecasts |>
   scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
 
 
-
 #ggsave("../Figures/AGU_RMSE_Season.png", AGU_RMSE_Season, height = 9, width = 17.2, units = "in")
-
 
 
 ## why is fcr summer clim not straight
@@ -137,6 +156,33 @@ skill_persist_rmse <- Scored_forecasts |>
 
 #ggsave("../Figures/AGU_RMSEskill.png", skill_persist_rmse, height = 8.3, width = 17.3, units = "in")
 
+skill_persist_crps <- Scored_forecasts |> 
+    mutate(site_id = ifelse(site_id == "bvre", "Beaverdam", site_id),
+         site_id = ifelse(site_id == "fcre", "Falling Creek", site_id),
+         site_id = ifelse(site_id == "ccre", "Carvins Cove", site_id)) |> 
+   group_by(site_id, model_id, Horizon) |> 
+   summarise( CRPS = mean(crps, na.rm = T)
+            ) |> 
+  select(Horizon, site_id, model_id, CRPS) |> 
+  pivot_wider(names_from = model_id, values_from = CRPS) |> 
+  mutate(TS_AR_s = 1-(TS_AR/Persistence),
+         ML_s = 1-(ML/Persistence),
+         TS_Met_s = 1-(TS_Met/Persistence),
+         TS_Rain_s = 1-(TS_Rain/Persistence)) |> 
+  select(site_id, Horizon, TS_AR_s:TS_Rain_s) |> 
+  pivot_longer(-c(1:2)) |> 
+  ggplot(aes(x = Horizon, y = value, color = name))+
+  geom_hline(yintercept = 0, linetype = 2, linewidth =1.2)+
+  geom_line(linewidth = 1.5)+
+  facet_wrap(~site_id, nrow = 1)+
+  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ #c(1,3,5,7,9,11,13,15)
+  scale_color_manual(values = c("TS_AR_s" = "#CC6677",
+                              "ML_s" = "#117733", "TS_Rain_s" = "#332288", "TS_Met_s" = "#888888"))+
+  labs(x = "Horizon", y = "Forecast Skill", color = "model")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18))
+
+
+#ggsave("../Figures/AGU_CRPSskill.png", skill_persist_crps, height = 3, width = 7, units = "in")
 
 
 #by season 
