@@ -356,16 +356,11 @@ Scored_forecasts |>
              #MAE = mean(abs(mean - observation), na.rm = T),
              CRPS = mean(crps, na.rm = T),
              SD = mean(sd, na.rm = T)
-            ) |> 
-    pivot_longer(-c(1:4)) |>
-  filter(name == "RMSE") |> 
-  group_by(model_id, name) |> 
-  summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),
-            median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),
-            range = max - min
-            )
+            ) |>     pivot_longer(-c(1:4)) |>
+  filter(name == "SD") |> 
+  group_by(model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),        range = max - min    )
 
 #RMSE horizon by reservoir
 Scored_forecasts |> 
@@ -375,15 +370,10 @@ Scored_forecasts |>
              CRPS = mean(crps, na.rm = T),
              SD = mean(sd, na.rm = T)
             ) |> 
-    pivot_longer(-c(1:4)) |>
-  filter(name == "RMSE") |> 
-  group_by(site_id, model_id, name) |> 
-  summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),
-            median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),
-            range = max - min
-            )
+    pivot_longer(-c(1:4)) |>  filter(name == "RMSE") |> 
+  group_by(site_id, model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1),  median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),       range = max - min           )
 
 #by reservoir no model ID or horizon
 Scored_forecasts |> 
@@ -393,15 +383,10 @@ Scored_forecasts |>
              CRPS = mean(crps, na.rm = T),
              SD = mean(sd, na.rm = T)
             ) |> 
-    pivot_longer(-c(1:4)) |>
-  filter(name == "RMSE") |> 
-  group_by(site_id, name) |> 
-  summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),
-            median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),
-            range = max - min
-            )
+    pivot_longer(-c(1:4)) |>  filter(name == "CRPS") |> 
+  group_by(site_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),      range = max - min        )
 
 
 ```
@@ -747,6 +732,34 @@ Scored_forecasts_seasons |>
   group_by(model_id, Season2, site_id) |> 
   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |> 
   pivot_wider(names_from = Season2, values_from = RMSE)
+
+
+#just season 
+Scored_forecasts_seasons |> 
+  group_by(Season2, Horizon) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+            CRPS = round(mean(crps, na.rm = T),2)) |> 
+  pivot_wider(names_from = Season2, values_from = CRPS) |> 
+  pivot_longer(-c(1)) |> 
+  group_by(name) |> 
+  summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),      range = max - min        )
+
+
+
+#season and site
+Scored_forecasts_seasons |> 
+  group_by(site_id, Season2, Horizon) |> 
+  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
+            CRPS = round(mean(crps, na.rm = T),2)) |> 
+  pivot_wider(names_from = Season2, values_from = CRPS) |> 
+  pivot_longer(-c(1:2)) |> 
+  group_by(name, site_id) |> 
+  summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),      range = max - min        )
+
 
 
 ```

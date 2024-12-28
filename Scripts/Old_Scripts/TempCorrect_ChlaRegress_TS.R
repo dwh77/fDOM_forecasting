@@ -3,6 +3,45 @@ library(tidyverse)
 library(ggpmisc) #stat poly line
 
 
+## EXO tests w/ long file
+exotest2 <- read_csv("C:/Users/dwh18/Downloads/EXOlong_tempTest.csv")
+
+plot(exotest2$Temp)
+points(exotest2$fdom_QSU)
+
+exotest2 |> 
+  #filter(Temp > 10, Temp < 16) |> 
+  ggplot(aes(x = Temp, y = fdom_QSU))+
+  geom_point()+
+  geom_smooth()
+
+lm(fdom_QSU~Temp, data = exotest2)
+
+
+## EXO tests w/ shorter file
+exotest <- read_csv("C:/Users/dwh18/Downloads/EXO_tempTest_v2.csv")
+
+plot(exotest$Temp)
+points(exotest$fdom_QSU)
+
+exotest |> 
+  #filter(Temp > 10, Temp < 16) |> 
+  ggplot(aes(x = Temp, y = fdom_QSU))+
+  geom_point()+
+  geom_smooth()
+
+lm(fdom_QSU~Temp, data = exotest)
+
+-0.1784/14.99
+
+exotest_2 <- exotest |> 
+  filter(Temp > 10, Temp < 16)
+
+lm(fdom_QSU~Temp, data = exotest_2)
+
+-0.2285/15.6691
+
+
 
 #### Get data ----
 
