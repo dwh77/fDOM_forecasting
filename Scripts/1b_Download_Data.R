@@ -2,6 +2,7 @@
 
 #packages 
 library(tidyverse)
+library(arrow)
 
 #### FCR, BVR, and CCR fDOM target data  ------------------------------------------
 
@@ -9,9 +10,19 @@ library(tidyverse)
 ### S3 links 
 targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
 
-ltreb_targets <- read_csv(targets_url) |> 
+fcr_targets <- read_csv(targets_url) |> 
   select(-project_id, -duration) |> 
-  filter(variable == "fDOM_QSU_mean")
+  filter(variable %in% c("fDOM_QSU_mean", "Temp_C_mean"),
+         site_id == "fcre",
+         depth_m == 1.6) |> 
+  pivot_wider(names_from = variable, values_from = observation)
+
+bvr_targets <- read_csv(targets_url) |> 
+  select(-project_id, -duration) |> 
+  filter(variable %in% c("fDOM_QSU_mean", "Temp_C_mean"),
+         site_id == "bvre",
+         depth_m == 1.5) |> 
+  pivot_wider(names_from = variable, values_from = observation)
 
 
 #### CCR water Q data
@@ -22,16 +33,26 @@ ccrfull <- rbind(ccr_edi, ccr_L1)
 ccr_waterQ <- ccrfull |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
-  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T)) |> 
+  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T),
+            Temp_C_mean = mean(EXOTemp_C_1, na.rm = T)) |> 
   mutate(site_id = "ccre",
          depth_m = 1.5) |> 
-  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
-  pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
+  select(Date, site_id, depth_m, fDOM_QSU_mean, Temp_C_mean) |> 
+  # pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
   rename(datetime = Date)
 
 ####bind reservoirs together and write csv
-res_fdom <- rbind(ltreb_targets, ccr_waterQ)
+res_fdom_raw <- rbind(fcr_targets, bvr_targets, ccr_waterQ)
 
+p <- -0.01
+
+res_fdom <- res_fdom_raw |> 
+  mutate(fdom_TC = fDOM_QSU_mean/(1 + (p*(Temp_C_mean - 20)) )   ) |> 
+  select(site_id, datetime, depth_m, fdom_TC) |> 
+  rename(fDOM_QSU_mean = fdom_TC) |> 
+  pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") 
+  
+  
 write.csv(res_fdom, "Data/GeneratedData/Targets_fDOM_allReservoirs.csv", row.names = F)
 
 
@@ -52,7 +73,7 @@ noaa_new_daily <- arrow::open_dataset(new_met_bucket) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
   dplyr::collect()
 
-write.csv(noaa_new_daily, "Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv", row.names = F)
+write.csv(noaa_new_daily, "Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_28sep20-23jan25.csv", row.names = F)
 
 
 #### FCR and BVR water temp forecasts  ------------------------------------------
@@ -108,7 +129,12 @@ fcr_df_flare_new_forbind <- fcr_df_flare_new |>
 fcr_water_temp_4cast_data <- rbind(fcr_df_flare_old_forbind, fcr_df_flare_new_forbind) |>
   filter(parameter <= 31)
 
-write.csv(fcr_water_temp_4cast_data, "Data/GeneratedData/FCR_FLARE_11nov22-12aug24.csv", row.names = F)
+##horizon check
+#z <- fcr_water_temp_4cast_data |> 
+#mutate(Horizon = as.Date(datetime_date) - as.Date(reference_datetime)) |>
+  #   group_by(reference_datetime) |> summarise(horizon = max(Horizon))
+
+write.csv(fcr_water_temp_4cast_data, "Data/GeneratedData/FCR_FLARE_11nov22-11jan25.csv", row.names = F)
 
 
 ## BVR 
@@ -160,7 +186,12 @@ bvr_df_flare_new_forbind <- bvr_df_flare_new |>
 bvr_water_temp_4cast_data <- rbind(bvr_df_flare_old_forbind, bvr_df_flare_new_forbind) |>
   filter(parameter <= 31)
 
-write.csv(bvr_water_temp_4cast_data, "Data/GeneratedData/BVR_FLARE_11nov22-12aug24.csv", row.names = F)
+##horizon check
+# z <- bvr_water_temp_4cast_data |>
+# mutate(Horizon = as.Date(datetime_date) - as.Date(reference_datetime)) |>
+#   group_by(reference_datetime) |> summarise(horizon = max(Horizon))
+
+write.csv(bvr_water_temp_4cast_data, "Data/GeneratedData/BVR_FLARE_11nov22-24jan25.csv", row.names = F)
 
 
 
@@ -176,7 +207,7 @@ noaa_df_ccr <-  arrow::open_dataset(noaa_df) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
   dplyr::collect()
 
-write.csv(noaa_df_ccr, "Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-12aug24.csv", row.names = F)
+write.csv(noaa_df_ccr, "Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-23jan25.csv", row.names = F)
 
 
 #### CCR water temp forecasts ------------------------------------------
@@ -243,7 +274,12 @@ ccr_df_flare_new_forbind <- ccr_df_flare_new |>
 ccr_water_temp_4cast_data <- rbind(ccre_reforecast_forbind, ccr_df_flare_old_forbind, ccr_df_flare_new_forbind) |>
   filter(parameter <= 31)
 
-write.csv(ccr_water_temp_4cast_data, "Data/GeneratedData/CCR_FLARE_1jan23-12aug24.csv", row.names = F)
+##horizon check
+# z <- ccr_water_temp_4cast_data |>
+# mutate(Horizon = as.Date(datetime_date) - as.Date(reference_datetime)) |>
+#   group_by(reference_datetime) |> summarise(horizon = max(Horizon))
+
+write.csv(ccr_water_temp_4cast_data, "Data/GeneratedData/CCR_FLARE_1jan23-24jan25.csv", row.names = F)
 
 
 

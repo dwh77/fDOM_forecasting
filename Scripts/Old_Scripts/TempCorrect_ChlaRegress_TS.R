@@ -4,30 +4,37 @@ library(ggpmisc) #stat poly line
 
 
 ## EXO tests w/ long file
-exotest2 <- read_csv("C:/Users/dwh18/Downloads/EXOlong_tempTest.csv")
-
-plot(exotest2$Temp)
-points(exotest2$fdom_QSU)
-
-exotest2 |> 
-  #filter(Temp > 10, Temp < 16) |> 
-  ggplot(aes(x = Temp, y = fdom_QSU))+
-  geom_point()+
-  geom_smooth()
-
-lm(fdom_QSU~Temp, data = exotest2)
+# exotest2 <- read_csv("C:/Users/dwh18/Downloads/EXOlong_tempTest.csv")
+# 
+# plot(exotest2$Temp)
+# points(exotest2$fdom_QSU)
+# 
+# exotest2 |> 
+#   #filter(Temp > 10, Temp < 16) |> 
+#   ggplot(aes(x = Temp, y = fdom_QSU))+
+#   geom_point()+
+#   geom_smooth()
+# 
+# lm(fdom_QSU~Temp, data = exotest2)
 
 
 ## EXO tests w/ shorter file
-exotest <- read_csv("C:/Users/dwh18/Downloads/EXO_tempTest_v2.csv")
+# exotest <- read_csv("C:/Users/dwh18/Downloads/EXO_tempTest_v2.csv")
+exotest <- read_csv("C:/Users/dwh18/Downloads/EXOtemptest.csv")
 
 plot(exotest$Temp)
 points(exotest$fdom_QSU)
+points(exotest$fdom_RFU+6)
+points(exotest$cond/10)
+points(exotest$chlarfu+15)
+points(exotest$dosat/10)
 
 exotest |> 
+  slice(20:200) |> 
   #filter(Temp > 10, Temp < 16) |> 
   ggplot(aes(x = Temp, y = fdom_QSU))+
   geom_point()+
+  stat_poly_line(method = "lm", linewidth = 2)+
   geom_smooth()
 
 lm(fdom_QSU~Temp, data = exotest)
@@ -41,7 +48,12 @@ lm(fdom_QSU~Temp, data = exotest_2)
 
 -0.2285/15.6691
 
+exotest_3 <- exotest |> 
+  slice(20:200) 
 
+lm(fdom_QSU~Temp, data = exotest_3)
+
+-0.1844 / 15.1136
 
 #### Get data ----
 
