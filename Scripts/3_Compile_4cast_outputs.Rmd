@@ -20,20 +20,8 @@ library(score4cast)
 ### Read in df 
 targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 
-### FCR water Q data
-fcr_waterQ <- targets_fdom |>
-  filter(site_id == "fcre")
-
-###BVR water Q data
-bvr_waterQ <- targets_fdom |>
-  filter(site_id == "bvre")
-
-### CCR water Q data
-ccr_waterQ <- targets_fdom |>
-  filter(site_id == "ccre")
-
-#bind all three together for scoring later
-allres_targets <- targets_fdom #rename to match prior code 
+#rename to match prior code
+allres_targets <- targets_fdom  
 
 
 ```
@@ -81,7 +69,6 @@ allRes_NNETAR_output_all <- list.files(path = "../Data/Forecast_Outputs/NNETAR_4
   base::lapply(read_csv) |> 
   bind_rows()  
 
-head(allRes_NNETAR_output_all)
 
 #write csv of all data together
 write.csv(allRes_NNETAR_output_all, "../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast.csv", row.names = F)
@@ -265,11 +252,9 @@ Bind all scores together and write csv
 
 ```{r}
 ##Bind scores together 
-All_Scores <- rbind(AR_scores, RainLag_scores, MetRegress_scores, nnetar_scores, Clim_scores, Persist_scores) |> 
-  mutate(model_id = ifelse(model_id %in% c("example_fDOM_AR_dwh", "fDOM_AR_dwh"), "fDOM_AR_dwh", model_id)
-         ) #fix different model_id names for AR models (remove example)
+All_Scores <- rbind(AR_scores, RainLag_scores, MetRegress_scores, nnetar_scores, Clim_scores, Persist_scores)  
 
-write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores_6oct24.csv", row.names = F)
+write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores_30jan25.csv", row.names = F)
 
 ```
 
