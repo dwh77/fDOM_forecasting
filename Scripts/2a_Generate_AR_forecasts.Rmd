@@ -45,10 +45,10 @@ ccr_waterQ <- targets_fdom |>
 NOAA forecasts 
 ```{r}
 ## FCR and BVR 
-fcr_bvr_noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv")
+fcr_bvr_noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_28sep20-23jan25.csv")
 
 ## CCR
-ccr_noaa_daily <- read.csv("../Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-12aug24.csv")
+ccr_noaa_daily <- read.csv("../Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-23jan25.csv")
 
 ```
 
@@ -56,13 +56,13 @@ ccr_noaa_daily <- read.csv("../Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_2
 Water Temp forecasts 
 ```{r}
 ## FCR 
-fcr_flare <- read.csv("../Data/GeneratedData/FCR_FLARE_11nov22-12aug24.csv")
+fcr_flare <- read.csv("../Data/GeneratedData/FCR_FLARE_11nov22-11jan25.csv")
 
 ##BVR 
-bvr_flare <- read.csv("../Data/GeneratedData/BVR_FLARE_11nov22-12aug24.csv")
+bvr_flare <- read.csv("../Data/GeneratedData/BVR_FLARE_11nov22-24jan25.csv")
 
 ##CCR 
-ccr_flare <- read.csv("../Data/GeneratedData/CCR_FLARE_1jan23-12aug24.csv")
+ccr_flare <- read.csv("../Data/GeneratedData/CCR_FLARE_1jan23-24jan25.csv")
 
 ```
 
@@ -82,25 +82,27 @@ Set up directories to hold forecasts
 
 FCR
 ```{r}
-## set up dates for for loop; Start: "2023-04-13"; restarts "2024-03-01"
-forecast_date <- seq(ymd("2024-03-01"), ymd("2024-08-12"), by = "day")
-
 ##set up inputs to function
 model_id <- "fDOM_AR_dwh"
-targets_df <- fcr_waterQ
 var <- "fDOM_QSU_mean"
 site <- "fcre"
 forecast_depths <- 1.6
 project_id <- "vera4cast"
 calibration_start_date <- ymd("2023-03-13") #"2022-11-11"
 
+targets_df <- fcr_waterQ
 water_temp_4cast_data <- fcr_flare
 noaa_4cast <- fcr_bvr_noaa_daily
 
 n_members <- 31
-forecast_horizon <- 16
 
 output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/fcre/", model_id, "_", site, "_")
+
+## set up dates for for loop; Start: "2023-04-13"; restarts "2024-03-01"
+
+##Loop for 16 day horizon windows
+forecast_date <- seq(ymd("2023-11-10"), ymd("2025-01-01"), by = "day")
+forecast_horizon <- 16
 
 
 for (j in 1:length(forecast_date)) {
@@ -116,38 +118,67 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 
 }
 
-# Days loop broke: 6feb24 to 01march24 , 12aug24
+# Days loop broke: 6feb24 to 01march24 
 # Days with NA generated warning:  5aug23 - 8aug23, 2jul24 - 8jul24
+
+##Loop for 34 day horizon windows
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-01-01"), by = "day")
+forecast_horizon <- 34
+
+
+for (j in 1:length(forecast_date)) {
+
+  print(forecast_date[j])
+
+generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
+                       output_folder = output_folder, calibration_start_date = calibration_start_date,
+                       model_id = model_id, targets_df = targets_df,
+                       water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
+                      site = site, forecast_depths = forecast_depths, project_id = project_id)
+
+
+}
 
 ```
 
 
 BVR
 ```{r}
-## set up dates for for loop; Start: "2023-04-13"; restarts "2024-03-01"
-forecast_date <- seq(ymd("2024-03-01"), ymd("2024-08-11"), by = "day")
 
 ##set up inputs to function
 model_id <- "fDOM_AR_dwh"
-targets_df <- bvr_waterQ
 var <- "fDOM_QSU_mean"
 site <- "bvre"
 forecast_depths <- 1.5
 project_id <- "bvr_fdom_hindcast"
 calibration_start_date <- ymd("2023-03-13") #"2022-11-11"
 
+targets_df <- bvr_waterQ
 water_temp_4cast_data <- bvr_flare
 noaa_4cast <- fcr_bvr_noaa_daily
 
 n_members <- 31
-forecast_horizon <- 16
+
 output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/bvre/", model_id, "_", site, "_")
+
+
+
+
+
+
+
+## set up dates for for loop; Start: "2023-04-13"; restarts "2024-03-01"
+
+##Loop for 16 day horizon windows
+## set up dates for for loop; Start: "2023-04-13"; restarts "2024-02-07" 
+forecast_date <- seq(ymd("2024-02-07"), ymd("2025-01-01"), by = "day")
+forecast_horizon <- 16
 
 
 for (j in 1:length(forecast_date)) {
   
   print(forecast_date[j]) 
-
+  
 generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
                        output_folder = output_folder, calibration_start_date = calibration_start_date,
                        model_id = model_id, targets_df = targets_df,
@@ -161,37 +192,63 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 # Days loop broke:  6feb24; 19feb24 (gap in data from then to 1mar24); ends 10aug24
 # Days with NA generated warning: 8jun23 - 13jun23 
 
+
+
+#Loop for 34 day horizon windows
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-01-01"), by = "day")
+forecast_horizon <- 34
+
+
+for (j in 1:length(forecast_date)) {
+
+  print(forecast_date[j])
+
+generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
+                       output_folder = output_folder, calibration_start_date = calibration_start_date,
+                       model_id = model_id, targets_df = targets_df,
+                       water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
+                      site = site, forecast_depths = forecast_depths, project_id = project_id)
+
+
+}
+
+
 ```
 
 
 CCR
 ```{r}
-## set up dates for for loop
-#start loop at "2023-04-13"
-#restart loop at 24feb24 after loop breaks on 19feb24
-forecast_date <- seq(ymd("2024-02-24"), ymd("2024-08-11"), by = "day")
 
 ##set up inputs to function
 model_id <- "fDOM_AR_dwh"
-targets_df <- ccr_waterQ
 var <- "fDOM_QSU_mean"
 site <- "ccre"
 forecast_depths <- 1.5
 project_id <- "ccr_fdom_hindcast"
 calibration_start_date <- ymd("2023-03-13") #"2022-11-11"
 
+targets_df <- ccr_waterQ
 water_temp_4cast_data <- ccr_flare
 noaa_4cast <- ccr_noaa_daily
 
 n_members <- 31
-forecast_horizon <- 16
+
 output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/ccre/", model_id, "_", site, "_")
+
+
+## set up dates for for loop; Start: "2023-04-13"; restarts "2024-03-01"
+#start loop at "2023-04-13"
+#restart loop at 24feb24 after loop breaks on 19feb24
+
+##Loop for 16 day horizon windows
+forecast_date <- seq(ymd("2023-04-13"), ymd("2025-01-01"), by = "day")
+forecast_horizon <- 16
 
 
 for (j in 1:length(forecast_date)) {
   
   print(forecast_date[j]) 
-
+  
 generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
                        output_folder = output_folder, calibration_start_date = calibration_start_date,
                        model_id = model_id, targets_df = targets_df,
@@ -204,6 +261,30 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 
 # Days loop broke: 19feb24 (when starting at 13apr23)
 # Days with NA generated warning: 9jul23 - 17sep23; 1aug24 - 4aug24
+
+
+
+#Loop for 34 day horizon windows
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- ymd("2024-12-31")
+forecast_horizon <- 34
+
+
+for (j in 1:length(forecast_date)) {
+
+  print(forecast_date[j])
+
+generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = forecast_horizon, n_members = n_members,
+                       output_folder = output_folder, calibration_start_date = calibration_start_date,
+                       model_id = model_id, targets_df = targets_df,
+                       water_temp_4cast_data = water_temp_4cast_data, noaa_4cast = noaa_4cast, var = var,
+                      site = site, forecast_depths = forecast_depths, project_id = project_id)
+
+
+}
+
+
+
 
 ```
 

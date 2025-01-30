@@ -62,13 +62,13 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
   ###Trials for lag 
 
   #dummy data frame to hold prior 10 day values needed to get to ensembles 
-  forecasthold <- data.frame(datetime_date = rep(seq((forecast_date-10), forecast_date+16, by = "1 day"), 31),
-                             parameter = c(rep(0, 27), rep(1, 27), rep(2, 27), rep(3, 27), rep(4, 27), 
-                                           rep(5, 27), rep(6, 27), rep(7, 27), rep(8, 27), rep(9, 27), rep(10, 27),
-                                           rep(11, 27), rep(12, 27), rep(13, 27), rep(14, 27), rep(15, 27), rep(16, 27),
-                                           rep(17, 27), rep(18, 27), rep(19, 27), rep(20, 27), rep(21, 27), rep(22, 27),
-                                           rep(23, 27), rep(24, 27), rep(25, 27), rep(26, 27),
-                                           rep(27, 27), rep(28, 27), rep(29, 27), rep(30, 27)
+  forecasthold <- data.frame(datetime_date = rep(seq((forecast_date-10), forecast_date+forecast_horizon, by = "1 day"), 31),
+                             parameter = c(rep(0, 11+forecast_horizon), rep(1, 11+forecast_horizon), rep(2, 11+forecast_horizon), rep(3, 11+forecast_horizon), rep(4, 11+forecast_horizon), 
+                                           rep(5, 11+forecast_horizon), rep(6, 11+forecast_horizon), rep(7, 11+forecast_horizon), rep(8, 11+forecast_horizon), rep(9, 11+forecast_horizon), rep(10, 11+forecast_horizon),
+                                           rep(11, 11+forecast_horizon), rep(12, 11+forecast_horizon), rep(13, 11+forecast_horizon), rep(14, 11+forecast_horizon), rep(15, 11+forecast_horizon), rep(16, 11+forecast_horizon),
+                                           rep(17, 11+forecast_horizon), rep(18, 11+forecast_horizon), rep(19, 11+forecast_horizon), rep(20, 11+forecast_horizon), rep(21, 11+forecast_horizon), rep(22, 11+forecast_horizon),
+                                           rep(23, 11+forecast_horizon), rep(24, 11+forecast_horizon), rep(25, 11+forecast_horizon), rep(26, 11+forecast_horizon),
+                                           rep(27, 11+forecast_horizon), rep(28, 11+forecast_horizon), rep(29, 11+forecast_horizon), rep(30, 11+forecast_horizon)
                                            )) |> 
     mutate(datetime_date = as.character(datetime_date))
     
@@ -200,7 +200,7 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
 
 ########### Test function #######
 ##uncomment all lines below and run to run an example 4cast for one day 
-
+# 
 # forecast_date <- ymd("2024-05-06")
 # model_id <- "fDOM_RainLagRegress_dwh"
 # var <- "fDOM_QSU_mean"
@@ -208,9 +208,9 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
 # forecast_depths <- 1.6
 # project_id <- "vera4cast"
 # n_members <- 31
-# forecast_horizon <- 16
+# forecast_horizon <- 34
 # 
-# calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
+# calibration_start_date <- ymd("2023-03-13") #going back to start of noaa4casts since we're not limited by FLARE output
 # 
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>

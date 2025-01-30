@@ -44,11 +44,11 @@ Set up directories to hold forecasts
 
 ```{r}
 
-forecast_date <- seq(ymd("2023-04-13"), ymd("2024-08-11"), by = "day") 
+forecast_date <- seq(ymd("2023-06-13"), ymd("2025-01-01"), by = "day")
 
 var <- "fDOM_QSU_mean"
 targets_df <- targets_fdom
-forecast_horizon <- 16
+forecast_horizon <- 34
 
 output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/NNETAR_4casts/allRes/", "NNETAR_allRes_")
 
