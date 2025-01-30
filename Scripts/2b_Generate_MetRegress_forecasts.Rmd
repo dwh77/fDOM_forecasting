@@ -167,7 +167,7 @@ project_id <- "vera4cast"
 n_members <- 31
 forecast_horizon <- 34
 
-calibration_start_date <- ymd("2023-03-13") #ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
+calibration_start_date <- ymd("2023-03-13") 
 
 targets_df <- ccr_waterQ
 noaa_4cast <- ccr_noaa_daily

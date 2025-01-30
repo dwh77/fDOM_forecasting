@@ -50,20 +50,19 @@ Set up directories to hold forecasts
 ```
 
 
-## Run Climatology forecasts for all reservoirs
+## Run Persistence forecasts for all reservoirs
 
 FCR
 ```{r}
 ## set up dates for for loop
-#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-11"), by = "day")
+forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
 
 ##set up inputs to function
 model_id <- "fable_persistence"
 var <- "fDOM_QSU_mean"
 site <- "fcre"
 depth <- 1.6
-h <- 17
+h <- 35
 
 targets_df <- fcr_waterQ
 
@@ -92,15 +91,14 @@ BVR
 
 ```{r}
 ## set up dates for for loop
-#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-11"), by = "day")
+forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
 
 ##set up inputs to function
 model_id <- "fable_persistence"
 var <- "fDOM_QSU_mean"
 site <- "bvre"
 depth <- 1.5
-h <- 17
+h <- 35
 
 targets_df <- bvr_waterQ
 
@@ -130,15 +128,14 @@ CCR
 
 ```{r}
 ## set up dates for for loop
-#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-11"), by = "day")
+forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
 
 ##set up inputs to function
 model_id <- "fable_persistence"
 var <- "fDOM_QSU_mean"
 site <- "ccre"
 depth <- 1.5
-h <- 17
+h <- 35
 
 targets_df <- ccr_waterQ
 

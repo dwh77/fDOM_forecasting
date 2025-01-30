@@ -21,7 +21,9 @@ source('./Functions/Climatology_4cast_function.R')
 target data 
 ```{r}
 ### Read in df 
-targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv") %>% 
+  filter(datetime >= ymd("2021-07-01")) #to line up w/ start of CCR EXO deployement
+  #filter(datetime >= ymd("2023-03-13")) #to line up w/ other models
 
 ### FCR water Q data
 fcr_waterQ <- targets_fdom |>
@@ -56,15 +58,14 @@ Set up directories to hold forecasts
 FCR
 ```{r}
 ## set up dates for for loop
-#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-11"), by = "day")
+forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
 
 ##set up inputs to function
 model_id <- "climatology"
 var <- "fDOM_QSU_mean"
 site <- "fcre"
 depth <- 1.6
-h <- 16
+h <- 35
 
 targets_df <- fcr_waterQ
 
@@ -92,15 +93,14 @@ for (j in 1:length(forecast_date)) {
 BVR
 ```{r}
 ## set up dates for for loop
-#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-11"), by = "day")
+forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
 
 ##set up inputs to function
 model_id <- "climatology"
 var <- "fDOM_QSU_mean"
 site <- "bvre"
 depth <- 1.5
-h <- 16
+h <- 35
 
 targets_df <- bvr_waterQ
 
@@ -128,15 +128,14 @@ for (j in 1:length(forecast_date)) {
 CCR
 ```{r}
 ## set up dates for for loop
-#start at 12dec22, so we have a month of calibration for first forecast and go to end of data set 
-forecast_date <- seq(ymd("2022-12-12"), ymd("2024-08-11"), by = "day")
+forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
 
 ##set up inputs to function
 model_id <- "climatology"
 var <- "fDOM_QSU_mean"
 site <- "ccre"
 depth <- 1.5
-h <- 16
+h <- 35
 
 targets_df <- ccr_waterQ
 

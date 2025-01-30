@@ -88,7 +88,7 @@ var <- "fDOM_QSU_mean"
 site <- "fcre"
 forecast_depths <- 1.6
 project_id <- "vera4cast"
-calibration_start_date <- ymd("2023-03-13") #"2022-11-11"
+calibration_start_date <- ymd("2023-03-13") 
 
 targets_df <- fcr_waterQ
 water_temp_4cast_data <- fcr_flare
@@ -151,7 +151,7 @@ var <- "fDOM_QSU_mean"
 site <- "bvre"
 forecast_depths <- 1.5
 project_id <- "bvr_fdom_hindcast"
-calibration_start_date <- ymd("2023-03-13") #"2022-11-11"
+calibration_start_date <- ymd("2023-03-13") 
 
 targets_df <- bvr_waterQ
 water_temp_4cast_data <- bvr_flare
@@ -225,7 +225,7 @@ var <- "fDOM_QSU_mean"
 site <- "ccre"
 forecast_depths <- 1.5
 project_id <- "ccr_fdom_hindcast"
-calibration_start_date <- ymd("2023-03-13") #"2022-11-11"
+calibration_start_date <- ymd("2023-03-13") 
 
 targets_df <- ccr_waterQ
 water_temp_4cast_data <- ccr_flare
