@@ -274,20 +274,20 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 # site <- "fcre"
 # forecast_depths <- 1.6
 # project_id <- "vera4cast"
-# calibration_start_date <- ymd("2022-11-11")
+# calibration_start_date <- ymd("2023-03-13")
 # n_members <- 31
-# forecast_horizon <- 16
+# forecast_horizon <- 35
 # 
 # #targets
-#targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+# targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
-#   filter(datetime >= ymd("2022-01-01"), #trim to when we have Water temp 4casts
+#   filter(datetime >= ymd("2023-03-13"), #trim to when we have Water temp 4casts
 #          site_id == "fcre")
 # 
 # #water temp 4casts
-# water_temp_4cast_data <- read.csv("./Data/GeneratedData/FCR_FLARE_11nov22-12aug24.csv")
+# water_temp_4cast_data <- read.csv("./Data/GeneratedData/FCR_FLARE_11nov22-11jan25.csv")
 # #noaa 4casts
-# noaa_4cast <- read.csv("./Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-12aug24.csv")
+# noaa_4cast <- read.csv("./Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_28sep20-23jan25.csv")
 # 
 # ### set to your own local folder
 # output_folder <- paste0("C:/Users/dwh18/Downloads/", model_id, "_")
@@ -302,7 +302,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 #                       calibration_start_date = calibration_start_date )
 # 
 # 
-# #update to your local file path and check forecast plots
+# # #update to your local file path and check forecast plots
 # read.csv("C:/Users/dwh18/Downloads/fDOM_AR_dwh_2024-05-06.csv")|>
 #   mutate(date = as.Date(datetime)) |>
 #   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
