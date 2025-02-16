@@ -17,14 +17,14 @@ library(patchwork)
 ```{r}
 #read in scores 
 Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_30jan25.csv") |> 
-  # filter(reference_datetime >= ymd("2023-07-31"),
-  #        reference_datetime <= ymd("2024-08-01")) |> 
-    filter(reference_datetime >= ymd("2023-12-01"),
-         reference_datetime <= ymd("2024-11-30")) |>
-  #filter(reference_datetime >= ymd("2024-03-01")) |>
-   filter(reference_datetime != ymd("2023-12-28")) |> #fixes insane CCR NNETAR spikes
+  ## filter(reference_datetime >= ymd("2023-07-31"),
+  ##        reference_datetime <= ymd("2024-08-01")) |> # Aug 23 - July 24
+    # filter(reference_datetime >= ymd("2023-12-01"),
+    #      reference_datetime <= ymd("2024-11-30")) |>  #Dec 23 - Nov 24
+    #  filter(reference_datetime != ymd("2023-12-28")) |> #fixes insane CCR NNETAR spikes
+  filter(reference_datetime >= ymd("2024-03-01")) |>
   mutate(Horizon = datetime - reference_datetime) |> 
-  filter(Horizon > 0, Horizon < 17) |>
+  filter(Horizon > 0, Horizon < 35) |>
   mutate(site_id = ifelse(site_id == "bvre", "BVR", site_id),
          site_id = ifelse(site_id == "fcre", "FCR", site_id),
          site_id = ifelse(site_id == "ccre", "CCR", site_id)) |> 
@@ -109,7 +109,8 @@ fig5_RMSE_Horizon <- Scored_forecasts |>
   ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ #, linetype = model_type
   geom_line(linewidth = 1.2)+
   facet_wrap(~site_id, scales = "free_y", ncol = 3)+
-  scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
+  # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
+  # scale_x_continuous(breaks = c(1,5,10,15,20,25,30))+
   #ylim(0.5,5.2)+
   labs(x = "Horizon", y = "RMSE (QSU)")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
@@ -138,7 +139,7 @@ fig5_RMSE_Horizon_v2 <- rbind(a,b) |>
   geom_line(linewidth = 1.2)+
   facet_wrap(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y", ncol = 4)+
   #scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
-  scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
+  # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
   ylim(0.5,5.2)+
   labs(x = "Horizon", y = "RMSE (QSU)", color = "Model ID", linetype = "Model Type")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
@@ -167,12 +168,12 @@ fig5_SI_metrics_Horizon <- Scored_forecasts |>
              SD = mean(sd, na.rm = T)
             ) |> 
   pivot_longer(-c(1:4)) |> 
-  filter(!name %in% c("MAE", "SD")) |> 
+  filter(!name %in% c("MAE")) |> 
   ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
   geom_line(linewidth = 1.2)+
   facet_grid(name~site_id, scales = "free_y")+
   labs(x = "Horizon", y = "Metric (QSU)")+
-   scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
+   # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
   guides(linetype = guide_legend(nrow = 2))+
   theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10))+
@@ -212,7 +213,7 @@ ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
   facet_grid(name~factor(site_id, levels = c("Across Sites","BVR", "CCR", "FCR")), scales = "free_y")+
   labs(x = "Horizon", y = "Metric (QSU)")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
-    scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
+    # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
   guides(linetype = guide_legend(nrow = 2))+
   theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10))+
   scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
@@ -381,7 +382,7 @@ skill_crps_plot <- skill_df |>
   facet_grid(Null~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
-  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
   guides(colour = guide_legend(nrow = 1))+
   labs(x = "Horizon", color = "model", title = "b) CRPS Skill")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
@@ -396,7 +397,7 @@ skill_rmse_plot <- skill_df |>
   facet_grid(Null~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
-  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
   guides(colour = guide_legend(nrow = 1))+
   labs(x = "Horizon", color = "model", title = "a) RMSE Skill")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
@@ -421,7 +422,7 @@ skill_rmse_P_mainMS <- skill_df |>
   facet_grid(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
-  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
   #guides(colour = guide_legend(nrow = 2))+
   labs(x = "Horizon", y = "Skill_RMSE_Persistence", color = "Model ID")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
@@ -443,8 +444,7 @@ rmse_for_join <- rbind(a,b) |>
   ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ #, linetype = model_type
   geom_line(linewidth = 1.2)+
   facet_wrap(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y", ncol = 4)+
-  #scale_x_continuous(breaks = c(1,3,5,7,9,11,13,15))+
-  scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
+  # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
   ylim(0.5,5.2)+
   labs(x = "Horizon", y = "RMSE (QSU)", color = "Model ID", linetype = "Model Type")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
@@ -461,7 +461,7 @@ skill_for_join <- skill_df |>
   facet_grid(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
-  scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
+  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
   #guides(colour = guide_legend(nrow = 2))+
   labs(x = "Horizon", y = "Forecast Skill", color = "Model ID")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
@@ -489,7 +489,7 @@ plotly::ggplotly(fig5_SI_metrics_Horizon_v2)
 
 all_skill_SI <- skill_rmse_plot / skill_crps_plot
 
-plotly::ggplotly(skill_crps_plot)
+plotly::ggplotly(skill_rmse_plot)
 
 
 ```
@@ -563,11 +563,12 @@ ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
   facet_grid(name~factor(site_id, levels = c("Across Sites","BVR", "CCR", "FCR")), scales = "free_y")+
   labs(x = "Horizon", y = "Metric (QSU)")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
-    scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
   guides(linetype = guide_legend(nrow = 2))+
   theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10))+
   scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
 
+
+############# RMSE  ########################
 
 #across sites and all models 
 rbind(c,d) |> 
@@ -588,7 +589,25 @@ rbind(c,d) |>
             max = round(max(value, na.rm = T),1),        range = max - min    ) |> 
   select(site_id, name, median, min, max, range)
 
+##################### CRPS #######################
+#across sites and all models 
+rbind(c,d) |> 
+  group_by(site_id, model_id, name) |> 
+  filter(name == "CRPS") |> 
+  summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),        range = max - min    ) |> 
+  select(site_id, model_id, name, median, min, max, range)
 
+
+#across sites and models 
+rbind(c,d) |> 
+  group_by(site_id, name) |> 
+  filter(name == "CRPS") |> 
+  summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),        range = max - min    ) |> 
+  select(site_id, name, median, min, max, range)
 
 
 
@@ -667,7 +686,8 @@ skill_df |>
 
 
 skill_df |> 
-  filter(Null == "Skill_Peristence") |> 
+  filter(Null == "Skill_Peristence",
+         metric == "rmse") |> 
   select(site_id, Horizon, model_idA, metric, Null, value) |> 
   pivot_wider(names_from = model_idA, values_from = value)
 
@@ -748,7 +768,7 @@ rmse_season_v2 <- rbind(e,f) |>
   facet_grid(factor(site_id, levels = c("BVR", "CCR", "FCR", "Across Sites"))
              ~
                factor(Season2, levels = c("Winter", "Spring", "Summer", "Fall" )))+
-  scale_x_continuous(breaks = c(1,4,7,10,13,16))+
+  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+
   labs(x = "Horizon", y = "RMSE (QSU)")+
   guides(linetype = guide_legend(nrow = 2))+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
@@ -756,7 +776,7 @@ rmse_season_v2 <- rbind(e,f) |>
 
 rmse_season_v2
 
-#ggsave("../Figures/rmse_season_MS.png", rmse_season_v2, height = 5.5, width = 6.5, units = "in")
+#ggsave("../Figures/rmse_season_SI.png", rmse_season_v2, height = 5.5, width = 6.5, units = "in")
 
 
 
@@ -768,7 +788,7 @@ rmse_seasons_avgModels <- rbind(e,f) |>
   ggplot(aes(x = Horizon, y = RMSE, color = site_id))+ 
   geom_line(linewidth = 1.2)+
   facet_wrap(~factor(Season2, levels = c("Winter", "Spring", "Summer", "Fall" )), ncol = 4)+
-  scale_x_continuous(breaks = c(1,4,7,10,13,16))+
+  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+
   labs(x = "Horizon", y = "RMSE (QSU)")+
   guides(linetype = guide_legend(nrow = 2))+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
@@ -1179,8 +1199,8 @@ targets <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 
 fdom_TS <- targets |> 
   filter(#datetime >= ymd("2023-03-13"),
-         datetime >= ymd("2023-12-01"),
-         datetime < ymd("2024-12-01")
+         datetime >= ymd("2024-03-01")
+         # datetime < ymd("2024-12-01")
          ) |> 
   mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
          site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
@@ -1197,8 +1217,8 @@ fdom_TS <- targets |>
   # annotate(geom = "point", x = ymd("2024-03-02"), y = 28, shape = 17, size = 3, color = "#009E73", alpha = 0.7)+
   # annotate(geom = "point", x = ymd("2024-03-01"), y = 28, shape = 17, size = 3, color = "orange", alpha = 0.7)+
   # annotate(geom = "point", x = ymd("2024-03-03"), y = 28, shape = 17, size = 3, color = "skyblue", alpha = 0.7)+
-  scale_x_date(date_breaks = "2 month", date_labels = "%b %y" )+
-   scale_y_continuous(limits = c(3,28), breaks = c(5,10,15,20,25))+
+  scale_x_date(date_breaks = "1 month", date_labels = "%b" )+
+  scale_y_continuous(limits = c(3,28), breaks = c(5,10,15,20,25))+
   labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -1208,11 +1228,30 @@ fdom_TS
 
 #ggsave("../Figures/Observed_FDOM_TS.png", fdom_TS, height = 4, width = 6.5, units = "in")
 
+##Helene 
+
+# heleneplot <- targets |> 
+#   filter(datetime >= ymd("2024-09-15"),
+#          datetime < ymd("2024-10-20") ) |> 
+#   mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
+#          site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
+#          site_id_A = ifelse(site_id == "ccre", "CCR", site_id_A)) |> 
+#   ggplot(aes(x = datetime, y = observation, color = site_id_A))+
+#   geom_point()+
+#    scale_y_continuous(limits = c(3,30), breaks = c(5,10,15,20,25))+
+#   labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
+#   theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
+#                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+#   scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
+# 
+# heleneplot
+# plotly::ggplotly(heleneplot)
 
 ## Summary stats 
 targets |> 
-    filter(datetime >= ymd("2023-12-01"),
-         datetime < ymd("2024-12-01")
+  filter(#datetime >= ymd("2023-03-13"),
+         datetime >= ymd("2024-03-01")
+         # datetime < ymd("2024-12-01")
          ) |> 
   group_by(site_id) |> 
   summarise(min = round(min(observation, na.rm = T), 1),
@@ -1226,8 +1265,9 @@ targets |>
 
 #cleaned stats for full year for table in MS 
 targets |> 
-    filter(datetime >= ymd("2023-12-01"),
-         datetime < ymd("2024-12-01")
+  filter(#datetime >= ymd("2023-03-13"),
+         datetime >= ymd("2024-03-01")
+         # datetime < ymd("2024-12-01")
          ) |> 
   group_by(site_id) |> 
   summarise(min = round(min(observation, na.rm = T), 1),
@@ -1248,8 +1288,9 @@ targets |>
          Season2 = ifelse(month %in% c(9,10,11), "Fall", Season2),
          Season2 = ifelse(month %in% c(1,2,12), "Winter", Season2)
          ) |> 
-    filter(datetime >= ymd("2023-12-01"),
-         datetime < ymd("2024-12-01")
+  filter(#datetime >= ymd("2023-03-13"),
+         datetime >= ymd("2024-03-01")
+         # datetime < ymd("2024-12-01")
          ) |> 
   group_by(site_id, Season2) |> 
   summarise(min = round(min(observation, na.rm = T), 1),
