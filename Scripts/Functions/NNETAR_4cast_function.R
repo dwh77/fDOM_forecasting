@@ -189,7 +189,7 @@ fdom_nnetar <- function(forecast_date,
 ##uncomment lines below to run function for one day 
 
 
-# ## Set up target data 
+# ## Set up target data
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
 #   #filter(site_id == "fcre") |>
@@ -197,7 +197,7 @@ fdom_nnetar <- function(forecast_date,
 # 
 # 
 # ###function inputs
-# forecast_date <- ymd("2023-05-06")
+# forecast_date <- ymd("2024-07-06")
 # 
 # var <- "fDOM_QSU_mean"
 # forecast_horizon <- 35
@@ -212,7 +212,7 @@ fdom_nnetar <- function(forecast_date,
 # 
 # 
 # #plot example forecast
-# read.csv("C:/Users/dwh18/Downloads/NNETAR_2023-05-06.csv")|>
+# read.csv("C:/Users/dwh18/Downloads/NNETAR_2024-07-06.csv")|>
 #   mutate(date = as.Date(datetime)) |>
 #   ggplot(aes(x = date, y = prediction, color = as.character(parameter)))+
 #   geom_line()+
