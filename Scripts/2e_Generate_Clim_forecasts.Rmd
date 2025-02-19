@@ -22,7 +22,7 @@ target data
 ```{r}
 ### Read in df 
 targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv") %>% 
-  filter(datetime >= ymd("2021-07-01")) #to line up w/ start of CCR EXO deployement
+  filter(datetime >= ymd("2021-07-01")) #to line up w/ start of CCR EXO deployement so all reservoirs have same training
   #filter(datetime >= ymd("2023-03-13")) #to line up w/ other models
 
 ### FCR water Q data

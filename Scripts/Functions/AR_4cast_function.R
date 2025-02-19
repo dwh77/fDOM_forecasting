@@ -276,7 +276,7 @@ generate_fDOM_forecast <- function(forecast_date, # a recommended argument so yo
 # project_id <- "vera4cast"
 # calibration_start_date <- ymd("2023-03-13")
 # n_members <- 31
-# forecast_horizon <- 35
+# forecast_horizon <- 34
 # 
 # #targets
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")

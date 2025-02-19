@@ -189,9 +189,9 @@ generate_fDOM_regress_forecast <- function(forecast_date, # a recommended argume
 # forecast_depths <- 1.6
 # project_id <- "vera4cast"
 # n_members <- 31
-# forecast_horizon <- 16
+# forecast_horizon <- 35
 # 
-# calibration_start_date <- ymd("2020-09-27") #going back to start of noaa4casts since we're not limited by FLARE output
+# calibration_start_date <- ymd("2023-03-13") #keep consistent across models
 # 
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>

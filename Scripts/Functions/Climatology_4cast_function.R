@@ -137,9 +137,11 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
 # #get target data
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
-#   filter(site_id == "fcre")
+#   filter(site_id == "fcre") |> 
+#   filter(datetime >= ymd("2021-07-01")) #to line up w/ start of CCR EXO deployement so all reservoirs have same training
 # 
-# #set inputs 
+# 
+# #set inputs
 # forecast_date <- ymd("2024-05-11")
 # 
 # ##set up inputs to function
@@ -147,7 +149,7 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
 # var <- "fDOM_QSU_mean"
 # site <- "fcre"
 # depth <- 1.6
-# h <- 16
+# h <- 35
 # 
 # #update local folder
 # output_folder <- paste0("C:/Users/dwh18/Downloads/", site, "_Clim_")
@@ -156,7 +158,7 @@ generate_baseline_climatology <- function(targets, # a dataframe already read in
 # #run example
 # generate_baseline_climatology(forecast_date = forecast_date,
 #                                 targets = targets_df, h = h, site = site, model_id = model_id,
-#                                 var = var, depth = depth, 
+#                                 var = var, depth = depth,
 #                                 output_folder = output_folder)
 # 
 # 

@@ -1,4 +1,4 @@
-#### Function to run AR model forecasts
+#### Function to run fDOM Precipitation regression model forecasts
 
 library(tidyverse)
 
@@ -200,7 +200,7 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
 
 ########### Test function #######
 ##uncomment all lines below and run to run an example 4cast for one day 
-# 
+
 # forecast_date <- ymd("2024-05-06")
 # model_id <- "fDOM_RainLagRegress_dwh"
 # var <- "fDOM_QSU_mean"
@@ -208,9 +208,9 @@ generate_fDOM_RainLag_forecast <- function(forecast_date, # a recommended argume
 # forecast_depths <- 1.6
 # project_id <- "vera4cast"
 # n_members <- 31
-# forecast_horizon <- 34
+# forecast_horizon <- 35
 # 
-# calibration_start_date <- ymd("2023-03-13") #going back to start of noaa4casts since we're not limited by FLARE output
+# calibration_start_date <- ymd("2023-03-13") #keep consistent across models
 # 
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>

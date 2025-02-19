@@ -132,7 +132,7 @@ generate_baseline_persistenceRW <- function(targets,
 # var <- "fDOM_QSU_mean"
 # site <- "fcre"
 # depth <- 1.6
-# h <- 17
+# h <- 35
 # 
 # 
 # #update local folder

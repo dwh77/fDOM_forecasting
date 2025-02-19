@@ -192,24 +192,24 @@ fdom_nnetar <- function(forecast_date,
 # ## Set up target data 
 # targets_fdom <- read_csv("./Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 # targets_df <- targets_fdom |>
-#   filter(site_id == "fcre")
+#   #filter(site_id == "fcre") |>
+#   filter(datetime >= ymd("2023-03-13")) #filter to same starting point as AR and met regression
 # 
 # 
-# 
-# ###function inputs 
+# ###function inputs
 # forecast_date <- ymd("2023-05-06")
 # 
 # var <- "fDOM_QSU_mean"
-# forecast_horizon <- 16
+# forecast_horizon <- 35
 # 
 # #update for local folder
 # output_folder <- paste0("C:/Users/dwh18/Downloads/", "NNETAR_")
 # 
 # 
 # #run function
-# fdom_nnetar(forecast_date = forecast_date, targets_df = targets_df, var = var, 
+# fdom_nnetar(forecast_date = forecast_date, targets_df = targets_df, var = var,
 #               forecast_horizon = forecast_horizon, output_folder = output_folder)
-#   
+# 
 # 
 # #plot example forecast
 # read.csv("C:/Users/dwh18/Downloads/NNETAR_2023-05-06.csv")|>
