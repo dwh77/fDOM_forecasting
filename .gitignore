@@ -3,9 +3,8 @@ fDOM_forecasting.Rproj
 .Rhistory
 .RData
 .Ruserdata
-fDOM_4cast.Rproj
+fDOM_4casts.Rproj
 Data/GeneratedData/
-Scripts/Old_Scripts/
 Data/Forecast_Outputs/AR_4casts
 Data/Forecast_Outputs/Clim_4casts
 Data/Forecast_Outputs/MetRegress_4casts
