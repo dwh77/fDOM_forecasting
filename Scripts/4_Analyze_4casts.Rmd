@@ -22,7 +22,8 @@ Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_30jan25
     # filter(reference_datetime >= ymd("2023-12-01"),
     #      reference_datetime <= ymd("2024-11-30")) |>  #Dec 23 - Nov 24
     #  filter(reference_datetime != ymd("2023-12-28")) |> #fixes insane CCR NNETAR spikes
-  filter(reference_datetime >= ymd("2024-03-01")) |>
+  filter(reference_datetime >= ymd("2024-03-01"),
+         reference_datetime <= ymd("2025-02-28")) |>
   mutate(Horizon = datetime - reference_datetime) |> 
   filter(Horizon > 0, Horizon < 35) |>
   mutate(site_id = ifelse(site_id == "bvre", "BVR", site_id),
@@ -48,18 +49,6 @@ model_shape <- c("Data Driven" = 1, "Baseline" = 4)
 
 ## Checks on missing data and forecasts 
 
-```{r}
-#what days are missing 4casts generated 
-Scored_forecasts |> 
-  filter(Horizon == 1) |> 
-  filter(reference_datetime >= ymd("2023-12-01")) |> 
-  ggplot(aes(x = reference_datetime, y = crps))+
-  geom_point()+
-  facet_grid(site_id~model_id, scales = "free_y")
-
-
-```
-
 
 explore missing AR day 
 
@@ -67,9 +56,12 @@ explore missing AR day
 
 AR <- Scored_forecasts |> filter(model_id == "TS_AR")
 
-AR_na <- AR |> filter(is.na(crps))
-unique(AR_na$datetime)
+#no observation
+AR_na <- AR |> filter(is.na(observation))
+missdateslist <- unique(AR_na$datetime)
+AR_na2 <- AR_na |> filter(datetime %in% missdateslist)
 
+#no forecast mean
 ARmeanNA <- AR |> filter(is.na(mean))
 unique(ARmeanNA$reference_datetime)
 
@@ -155,7 +147,8 @@ ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
     # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
   guides(linetype = guide_legend(nrow = 2))+
-  theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10))+
+  theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
 
 SI_all_metrics_over_horizon
@@ -316,31 +309,35 @@ skill_df <- rbind(skill_crps_clim, skill_crps_persist, skill_rmse_clim, skill_rm
 #Skill CRPS 
 skill_crps_plot <- skill_df |> 
   filter(metric == "crps") |> 
+  mutate(NullA = ifelse(Null == "Skill_Climatology", "DOY", "Persistence")) |> 
   #filter(!site_id == "Across Sites") |> 
   ggplot(aes(x = Horizon, y = value, color = model_idA))+
   geom_line()+
-  facet_grid(Null~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
+  facet_grid(NullA~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
   # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
   guides(colour = guide_legend(nrow = 1))+
   labs(x = "Horizon", color = "model", title = "b) CRPS Skill")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_color_manual(values = model_colors)
 
 #Skill RMSE
 skill_rmse_plot <- skill_df |> 
   filter(metric == "rmse") |> 
+  mutate(NullA = ifelse(Null == "Skill_Climatology", "DOY", "Persistence")) |> 
   #filter(!site_id == "Across Sites") |> 
   ggplot(aes(x = Horizon, y = value, color = model_idA))+
   geom_line()+
-  facet_grid(Null~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
+  facet_grid(NullA~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
   # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
   guides(colour = guide_legend(nrow = 1))+
   labs(x = "Horizon", color = "model", title = "a) RMSE Skill")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 14))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_color_manual(values = model_colors)
 
 
@@ -605,21 +602,22 @@ Scored_forecasts |>
 Skill stats 
 
 ```{r}
-#
-skill_df |> 
-  filter(model_id == "AR", Null == "Skill_Peristence", metric == "rmse")
+### Horizons as column names
+skill_horizon <- skill_df |> 
+  mutate(value = round(value, 1)) |> 
+  mutate(NullA = ifelse(Null == "Skill_Climatology", "DOY", "Persistence")) |> 
+  select(site_id, Horizon, model_idA, metric, NullA, value) |> 
+  pivot_wider(names_from = Horizon, values_from = value) |> 
+  arrange(site_id, model_idA, metric, NullA)
 
+skill_horizon
 
-skill_df |> 
-  filter(Null == "Skill_Peristence",
-         metric == "rmse") |> 
-  select(site_id, Horizon, model_idA, metric, Null, value) |> 
-  pivot_wider(names_from = model_idA, values_from = value)
-
-
-skill_df |> 
-  select(site_id, Horizon, model_idA, metric, Null, value) |> 
-  pivot_wider(names_from = model_idA, values_from = value) 
+skill_horizon |>
+  filter(
+    #site_id %in% c("Across Sites"),
+    model_idA == "TS_AR",
+    metric == "rmse", NullA == "Persistence"
+  )
 
 
 
