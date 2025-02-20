@@ -890,24 +890,36 @@ fdom_TS
 
 #ggsave("../Figures/Observed_FDOM_TS.png", fdom_TS, height = 4, width = 6.5, units = "in")
 
-##Helene 
 
-# heleneplot <- targets |> 
-#   filter(datetime >= ymd("2024-09-15"),
-#          datetime < ymd("2024-10-20") ) |> 
-#   mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
-#          site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
-#          site_id_A = ifelse(site_id == "ccre", "CCR", site_id_A)) |> 
-#   ggplot(aes(x = datetime, y = observation, color = site_id_A))+
-#   geom_point()+
-#    scale_y_continuous(limits = c(3,30), breaks = c(5,10,15,20,25))+
-#   labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
-#   theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
-#                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-#   scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
-# 
-# heleneplot
-# plotly::ggplotly(heleneplot)
+
+#### Turnover and Helene plot (calling Helene landfall 024-09-26)
+
+turnover_helene_plot <- targets |>
+  filter(datetime >= ymd("2024-09-01"),
+         datetime < ymd("2024-12-01") ) |>
+  mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
+         site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
+         site_id_A = ifelse(site_id == "ccre", "CCR", site_id_A)) |>
+  ggplot(aes(x = datetime, y = observation, color = site_id_A))+
+  geom_point()+ geom_vline(xintercept = ymd("2024-09-26"))+
+  annotate(geom = "point", x = ymd("2024-10-28"), y = 22, shape = 15, size = 3, color = "#009E73")+
+  annotate(geom = "point", x = ymd("2024-11-16"), y = 22, shape = 15, size = 3, color = "orange")+
+  annotate(geom = "point", x = ymd("2024-11-03"), y = 22, shape = 15, size = 3, color = "skyblue")+
+  labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
+
+turnover_helene_plot
+plotly::ggplotly(turnover_helene_plot)
+
+###Helene numbers
+##CCR fDOM level rises from 6.7 to 12.8 QSU (6.7 QSU) between 25sep24 (day before) and 6oct24 (10 days after)
+##BVR fDOM level rises from 14.2 to 15.4 QSU (1.2 QSU) between 25sep24 (day before) and 6oct24 (10 days after)
+##FCR fDOM level rises from 17.6 to 26.3 QSU (8.7 QSU) between 25sep24 (day before) and 6oct24 (10 days after)
+
+###Turnover numbers
+
 
 
 ```
@@ -985,62 +997,58 @@ Calculate turnover dates; FCR and BVR
 ```{r}
 # targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
 # 
-# ##FCR 2023-11-01 mixes: 2024-03-02 re strats 
-# fcre_turnover <- read_csv(targets_url) |> 
-#   select(-project_id, -duration) |> 
+# #### FCR
+# ##FCR 2023-11-01 mixes: 2024-03-02 re strats; 2024-10-28 mixes
+# fcre_turnover <- read_csv(targets_url) |>
+#   select(-project_id, -duration) |>
 #   filter(site_id == "fcre",
-#          depth_m %in% c(0.1, 9)) |> 
+#          depth_m %in% c(0.1, 9)) |>
 #   filter(variable == "Temp_C_mean",
-#          datetime > ymd("2023-04-13")) |> 
-#   pivot_wider(names_from = depth_m, values_from = observation) |> 
+#          datetime > ymd("2023-04-13")) |>
+#   pivot_wider(names_from = depth_m, values_from = observation) |>
 #   rename(wtr_01 = 5,
-#          wtr_9 =4) |> 
+#          wtr_9 =4) |>
 #   mutate(Temp_diff = wtr_01 - wtr_9)
 # 
 # 
-# ##BVR - 2023-11-01 mixes: 2024-03-02 re strats
-# bvre_turnover <- read_csv(targets_url) |> 
-#   select(-project_id, -duration) |> 
+# #### BVR
+# ##BVR - 2023-11-01 mixes: 2024-03-02 re strats; 2024-11-16 mixes
+# bvre_turnover <- read_csv(targets_url) |>
+#   select(-project_id, -duration) |>
 #     filter(variable == "Temp_C_mean",
 #          datetime > ymd("2023-04-13"),
-#          site_id == "bvre") |> 
-#   filter(depth_m > 9 | depth_m < 1) |> 
-#   pivot_wider(names_from = depth_m, values_from = observation) |> 
-#   rename(wtr_01 = 5,
-#          wtr_9 =4) |> 
-#   mutate(Temp_diff = wtr_01 - wtr_9)
-
-```
-
-CCR
-
-```{r}
-# ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
-# ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
-# ccrfull <- rbind(ccr_edi, ccr_L1)
+#          site_id == "bvre") |>
+#   filter(depth_m > 9 | depth_m < 1) |>
+#   pivot_wider(names_from = depth_m, values_from = observation) 
+#
+#
+# #### CCR
+# ccrgit <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
+# ccredi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854")
+# ccrfull <- rbind(ccredi, ccrgit)
 # 
-# ccr_turnover <- ccrfull |> 
-#   select(3:16) |> 
-#   mutate(Date = as.Date(DateTime)) |> 
-#   select(-c(1,7:12)) |> 
-#   group_by(Date) |> 
-#   summarise(across(everything(), list(mean))) |> 
-#   filter(Date > ymd("2023-03-13")) |> 
+# ccr_turnover <- ccrfull |>
+#   select(3:16) |>
+#   mutate(Date = as.Date(DateTime)) |>
+#   select(-c(1,7:12)) |>
+#   group_by(Date) |>
+#   summarise(across(everything(), list(mean))) |>
+#   filter(Date > ymd("2023-03-13")) |>
 #   mutate(T1_T13 = ThermistorTemp_C_1_1 - ThermistorTemp_C_13_1,
 #          T2_T13 = ThermistorTemp_C_2_1 - ThermistorTemp_C_13_1,
 #          T3_T13 = ThermistorTemp_C_3_1 - ThermistorTemp_C_13_1,
 #          T4_T13 = ThermistorTemp_C_4_1 - ThermistorTemp_C_13_1,
 #          T5_T13 = ThermistorTemp_C_5_1 - ThermistorTemp_C_13_1)
-
-
-#CCR mixes: 2023-11-14; restrats 2024-03-03
+# 
+# 
+# #CCR mixes: 2023-11-14; restrats 2024-03-03; mixes 2024-11-03
+# #these and FCR and BVR defined as mixing first day top and bottom temp are < 1C; strat as first day that top and bottom are > 1C and remains for 2 weeks
 
 
 ```
 
 
-
-BVR and CCR water level
+get water level data 
 
 ```{r}
 fcredi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/271/9/f23d27b67f71c25cb8e6232af739f986")
@@ -1054,10 +1062,10 @@ ccrgit <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/r
 
 ```
 
-waterlevels 
+water level data and plots 
 
 ```{r}
-
+#### BVR
 bvrdepth <- rbind(bvredi, bvrgit) |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
@@ -1067,7 +1075,13 @@ bvrdepth <- rbind(bvredi, bvrgit) |>
 
 summary(bvrdepth)
 
+depth_bvrplot <- bvrdepth |> 
+  ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("BVR")
+plotly::ggplotly(depth_bvrplot)
+##BVR water level rises from 9.89 to 10.30 (0.4m) between 25sep24 (day before) and 6oct24 (10 days after helene)
 
+
+#### CCR
 ccrdepth <- rbind(ccredi, ccrgit) |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
@@ -1077,6 +1091,13 @@ ccrdepth <- rbind(ccredi, ccrgit) |>
 
 summary(ccrdepth)
 
+depth_ccrplot <- ccrdepth |> 
+  ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("CCR")
+plotly::ggplotly(depth_ccrplot)
+##CCR water level rises from 17.26 to 18.48 (1.2m) between 25sep24 (day before) and 6oct24 (10 days after helene)
+
+
+#### FCR
 fcrdepth <- rbind(fcredi, fcrgit) |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
@@ -1085,6 +1106,12 @@ fcrdepth <- rbind(fcredi, fcrgit) |>
          Date <= ymd("2025-03-01"))
 
 summary(fcrdepth)
+
+depth_fcrplot <- fcrdepth |> 
+  ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("FCR")
+plotly::ggplotly(depth_fcrplot)
+##FCR water level rises from 9.17 to 9.18  (0.01 m) between 25sep24 (day before) and 6oct24 (10 days after helene)
+## But peaked at 9.29m on 28sep24 (0.1m)
 
 
 ```
