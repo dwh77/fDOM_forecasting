@@ -15,7 +15,7 @@ chla_TSI <- chla |>
   summarise(meanChla = mean(Chla_ugL, na.rm = T))
 
 
-secchi <- read_csv( "https://pasta.lternet.edu/package/data/eml/edi/198/11/81f396b3e910d3359907b7264e689052" )
+secchi <- read_csv( "https://pasta.lternet.edu/package/data/eml/edi/198/13/3ee0ddb9f2183ad4d8c955d50d1b8fba"  )
 
 
 secchi_TSI <- secchi |> 
@@ -53,7 +53,7 @@ TSI
 
 #average across variables 
 TSI |> 
-  select(1, 5:7) |> 
+  select(1, 5,7) |> #dropping chla since CCr doesn't have a chla value
   pivot_longer(-1) |> 
   group_by(Reservoir) |> 
   summarise(TSI_mean = mean(value, na.rm = T))
