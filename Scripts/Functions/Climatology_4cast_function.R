@@ -3,6 +3,7 @@
 #https://github.com/LTREB-reservoirs/vera4cast/blob/main/R/ClimatologyModelFunction.R
 
 library(tidyverse)
+library(imputeTS)
 
 generate_baseline_climatology <- function(targets, # a dataframe already read in
                                           h = 35,
