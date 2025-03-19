@@ -6,55 +6,68 @@ library(arrow)
 
 #### FCR, BVR, and CCR fDOM target data  ------------------------------------------
 
-#### FCR and BVR through LTREB portal
-### S3 links 
-targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
+#set p for temp corrections 
+p <- -0.01
 
-fcr_targets <- read_csv(targets_url) |> 
-  select(-project_id, -duration) |> 
-  filter(variable %in% c("fDOM_QSU_mean", "Temp_C_mean"),
-         site_id == "fcre",
-         depth_m == 1.6) |> 
-  pivot_wider(names_from = variable, values_from = observation)
+#### FCR Water Q data
+fcr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/FCRE-data/refs/heads/fcre-catwalk-data-qaqc/fcre-waterquality_L1.csv")
+fcr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/271/9/f23d27b67f71c25cb8e6232af739f986" )
+fcrfull <- rbind(fcr_edi, fcr_L1)
 
-bvr_targets <- read_csv(targets_url) |> 
-  select(-project_id, -duration) |> 
-  filter(variable %in% c("fDOM_QSU_mean", "Temp_C_mean"),
-         site_id == "bvre",
-         depth_m == 1.5) |> 
-  pivot_wider(names_from = variable, values_from = observation)
+fcr_waterQ <- fcrfull |> 
+  mutate(fdom_TC = EXOfDOM_QSU_1/(1 + (p*(EXOTemp_C_1 - 20)) )   ) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(fdom_TC, na.rm = T)) |> 
+  mutate(site_id = "fcre",
+         depth_m = 1.6) |> 
+  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
+  rename(datetime = Date) |> 
+  filter(datetime < ymd("2025-03-19")) #### SINCE march 19th was midday when run; run 19mar25 - april when updating
+
+
+#### BVR Water Q data
+bvr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/BVRE-data/refs/heads/bvre-platform-data-qaqc/bvre-waterquality_L1.csv")
+bvr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/725/5/f649de0e8a468922b40dcfa34285055e" )
+bvrfull <- rbind(bvr_edi, bvr_L1)
+
+bvr_waterQ <- bvrfull |> 
+  mutate(fdom_TC = EXOfDOM_QSU_1.5/(1 + (p*(EXOTemp_C_1.5 - 20)) )   ) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(fdom_TC, na.rm = T)) |> 
+  mutate(site_id = "bvre",
+         depth_m = 1.5) |> 
+  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
+  rename(datetime = Date) |> 
+  filter(datetime < ymd("2025-03-19")) #### SINCE march 19th was midday when run; run 19mar25 - april when updating
 
 
 #### CCR water Q data
 ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
-ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/2/ea78dd541e089687af1f4c4b550bc9ca" )
+ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854")
 ccrfull <- rbind(ccr_edi, ccr_L1)
 
 ccr_waterQ <- ccrfull |> 
+  mutate(fdom_TC = EXOfDOM_QSU_1/(1 + (p*(EXOTemp_C_1 - 20)) )   ) |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
-  summarise(fDOM_QSU_mean = mean(EXOfDOM_QSU_1, na.rm = T),
-            Temp_C_mean = mean(EXOTemp_C_1, na.rm = T)) |> 
+  summarise(fDOM_QSU_mean = mean(fdom_TC, na.rm = T)) |> 
   mutate(site_id = "ccre",
          depth_m = 1.5) |> 
-  select(Date, site_id, depth_m, fDOM_QSU_mean, Temp_C_mean) |> 
-  # pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") |> 
-  rename(datetime = Date)
+  select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
+  rename(datetime = Date) |> 
+  filter(datetime < ymd("2025-03-19")) #### SINCE march 19th was midday when run; run 19mar25 - april when updating
+
 
 ####bind reservoirs together and write csv
-res_fdom_raw <- rbind(fcr_targets, bvr_targets, ccr_waterQ)
+res_fdom <- rbind(fcr_waterQ, bvr_waterQ, ccr_waterQ)
 
-p <- -0.01
-
-res_fdom <- res_fdom_raw |> 
-  mutate(fdom_TC = fDOM_QSU_mean/(1 + (p*(Temp_C_mean - 20)) )   ) |> 
-  select(site_id, datetime, depth_m, fdom_TC) |> 
-  rename(fDOM_QSU_mean = fdom_TC) |> 
+res_fdom_formated <- res_fdom |> 
   pivot_longer(-c(1:3), names_to = "variable", values_to = "observation") 
   
   
-write.csv(res_fdom, "Data/GeneratedData/Targets_fDOM_allReservoirs.csv", row.names = F)
-
+write.csv(res_fdom_formated, "Data/GeneratedData/Targets_fDOM_allReservoirs.csv", row.names = F)
 
 
 #### NOAA weather forecasts for BVR and FCR ------------------------------------------
@@ -106,12 +119,19 @@ fcr_df_flare_old_forbind <- fcr_df_flare_old |>
 ## current water temp since 2024-02-18
 fcr_new_flare_forecasts <- arrow::open_dataset("s3://anonymous@bio230121-bucket01/vera4cast/forecasts/parquet/project_id=vera4cast/duration=P1D/variable=Temp_C_mean?endpoint_override=renc.osn.xsede.org")
   
-fcr_df_flare_new <- fcr_new_flare_forecasts |>
+fcr_df_flare_newA <- fcr_new_flare_forecasts |>
     dplyr::filter(site_id %in% c("fcre"),
-                  model_id == "glm_aed_v1",
+                  reference_datetime > ymd("2025-01-08"),
+                  #model_id == "glm_aed_v1",
                   depth_m == 1.5) |>
     dplyr::rename(depth = depth_m) |> 
     dplyr::collect()
+
+fcr_df_flare_new_NEW <- fcr_new_flare_forecasts |>
+  dplyr::filter(model_id == "glm_aed_flare_v3",
+                depth_m == 1.6) |>
+  dplyr::rename(depth = depth_m) |>
+  dplyr::collect()
   
 
 fcr_df_flare_new_forbind <- fcr_df_flare_new |> 
