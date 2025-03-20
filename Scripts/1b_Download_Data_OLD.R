@@ -72,7 +72,7 @@ write.csv(res_fdom_formated, "Data/GeneratedData/Targets_fDOM_allReservoirs.csv"
 
 #### NOAA weather forecasts for BVR and FCR ------------------------------------------
 
-#Getting NOAA forecasts from 2020-09-25 to current day
+#Getting NOAA forecasts from 2020-09-30 to current day
 new_met_bucket <-arrow::s3_bucket(file.path("bio230121-bucket01/flare/drivers/met/gefs-v12/stage2/"),
                                   endpoint_override = 'renc.osn.xsede.org',
                                   anonymous = TRUE)
@@ -86,7 +86,7 @@ noaa_new_daily <- arrow::open_dataset(new_met_bucket) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
   dplyr::collect()
 
-write.csv(noaa_new_daily, "Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_28sep20-23jan25.csv", row.names = F)
+write.csv(noaa_new_daily, "Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_30sep20-18mar25.csv", row.names = F)
 
 
 #### FCR and BVR water temp forecasts  ------------------------------------------
@@ -227,7 +227,7 @@ noaa_df_ccr <-  arrow::open_dataset(noaa_df) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
   dplyr::collect()
 
-write.csv(noaa_df_ccr, "Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-23jan25.csv", row.names = F)
+write.csv(noaa_df_ccr, "Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_27sep20-18mar25.csv", row.names = F)
 
 
 #### CCR water temp forecasts ------------------------------------------
