@@ -58,7 +58,7 @@ Set up directories to hold forecasts
 FCR
 ```{r}
 ## set up dates for for loop
-forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 ##set up inputs to function
 model_id <- "climatology"
@@ -93,7 +93,7 @@ for (j in 1:length(forecast_date)) {
 BVR
 ```{r}
 ## set up dates for for loop
-forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 ##set up inputs to function
 model_id <- "climatology"
@@ -128,7 +128,7 @@ for (j in 1:length(forecast_date)) {
 CCR
 ```{r}
 ## set up dates for for loop
-forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 ##set up inputs to function
 model_id <- "climatology"
@@ -157,11 +157,5 @@ for (j in 1:length(forecast_date)) {
 ## NOTES
 
 ```
-
-
-
-
-
-
 
 

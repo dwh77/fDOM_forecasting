@@ -21,7 +21,8 @@ source('./Functions/Persistence_4cast_function.R')
 target data 
 ```{r}
 ### Read in df 
-targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv") |> 
+  filter(datetime >= ymd("2023-03-13")) #to line up w/ other models
 
 ### FCR water Q data
 fcr_waterQ <- targets_fdom |>
@@ -55,7 +56,7 @@ Set up directories to hold forecasts
 FCR
 ```{r}
 ## set up dates for for loop
-forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 ##set up inputs to function
 model_id <- "fable_persistence"
@@ -86,12 +87,10 @@ for (j in 1:length(forecast_date)) {
 ```
 
 
-
 BVR
-
 ```{r}
 ## set up dates for for loop
-forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 ##set up inputs to function
 model_id <- "fable_persistence"
@@ -123,12 +122,10 @@ for (j in 1:length(forecast_date)) {
 
 
 
-
 CCR
-
 ```{r}
 ## set up dates for for loop
-forecast_date <- seq(ymd("2023-06-01"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 ##set up inputs to function
 model_id <- "fable_persistence"
@@ -157,10 +154,6 @@ for (j in 1:length(forecast_date)) {
 ## NOTES
 
 ```
-
-
-
-
 
 
 

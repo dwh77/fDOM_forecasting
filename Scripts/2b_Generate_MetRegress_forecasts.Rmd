@@ -41,10 +41,10 @@ ccr_waterQ <- targets_fdom |>
 NOAA forecasts 
 ```{r}
 ## FCR and BVR 
-fcr_bvr_noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_28sep20-23jan25.csv")
+fcr_bvr_noaa_daily <- read.csv("../Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-19mar25.csv")
 
 ## CCR
-ccr_noaa_daily <- read.csv("../Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_29sep20-23jan25.csv")
+ccr_noaa_daily <- read.csv("../Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_27sep20-19mar25.csv")
 
 ```
 
@@ -68,7 +68,7 @@ Set up directories to hold forecasts
 FCR
 ```{r}
 ##set up function inputs
-forecast_date <- seq(ymd("2023-06-13"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 model_id <- "fDOM_MetRegression_dwh"
 var <- "fDOM_QSU_mean"
@@ -77,7 +77,7 @@ forecast_depths <- 1.6
 project_id <- "vera4cast"
 n_members <- 31
 
-forecast_horizon <- 34
+forecast_horizon <- 35
 
 calibration_start_date <- ymd("2023-03-13") 
 
@@ -103,7 +103,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
       } #end function
 
 
-## Notes on for loop: breaks at end of NOAA data
+## 
 
 
 ```
@@ -113,7 +113,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
 BVR
 ```{r}
 ##set up function inputs
-forecast_date <- seq(ymd("2023-06-13"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 model_id <- "fDOM_MetRegression_dwh"
 var <- "fDOM_QSU_mean"
@@ -122,7 +122,7 @@ forecast_depths <- 1.5
 project_id <- "vera4cast"
 n_members <- 31
 
-forecast_horizon <- 34
+forecast_horizon <- 35
 
 calibration_start_date <- ymd("2023-03-13") 
 
@@ -148,7 +148,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
       } #end function
 
 
-## Notes on for loop: breaks at end of NOAA data
+## 
 
 
 ```
@@ -157,7 +157,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
 CCR
 ```{r}
 ##set up function inputs
-forecast_date <- seq(ymd("2023-06-13"), ymd("2025-01-01"), by = "day")
+forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
 
 model_id <- "fDOM_MetRegression_dwh"
 var <- "fDOM_QSU_mean"
@@ -165,7 +165,7 @@ site <- "ccre"
 forecast_depths <- 1.5
 project_id <- "vera4cast"
 n_members <- 31
-forecast_horizon <- 34
+forecast_horizon <- 35
 
 calibration_start_date <- ymd("2023-03-13") 
 
@@ -191,7 +191,7 @@ generate_fDOM_regress_forecast(forecast_date = forecast_date[j], forecast_horizo
       } #end function
 
 
-## Notes on for loop: breaks 12aug - end of NOAA data
+## 
 
 
 ```
