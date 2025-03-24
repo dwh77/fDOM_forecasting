@@ -12,6 +12,7 @@ lake_directory <- "D:/fDOM_4cast_zenodo"
 noaa_df <- (arrow::s3_bucket('bio230121-bucket01/flare/drivers/met/gefs-v12/stage2', endpoint_override = 'renc.osn.xsede.org', anonymous = TRUE))
 
 ##can use this line to start exploring sub directories
+#open_dataset(noaa_df) #will show what the columns are
 #noaa_df$ls()
 # noaa_df$ls("reference_datetime=2023-06-22")
 # noaa_df$ls("reference_datetime=2023-06-22/site_id=fcre")

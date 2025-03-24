@@ -51,7 +51,7 @@ fcr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/ba
   mutate(reference_datetime = as.character(reference_datetime)) |> 
   collect()
 
-## new forecasts w/ aedV1 model from 2024-03-01 to 2025-01-10 (for ref dates)
+## new forecasts w/ aedV1 model from 2024-03-01 to 2025-01-11 (for ref dates)
 fcr_flare_new_aedv1 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/new/glm_aed_v1/") |>
   mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31,
@@ -65,11 +65,11 @@ fcr_flare_new_aedv1 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/
   select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id) |> 
   collect()
 
-## new forecasts w/ aedV3 model from 2025-01-11 to 2025-03-19 (for ref dates)
+## new forecasts w/ aedV3 model from 2025-01-12 to 2025-03-19 (for ref dates)
 fcr_flare_new_aedv3 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/new/glm_aed_flare_v3/") |>
   mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31,
-         reference_datetime > ymd_hms("2025-01-10 00:00:00")) |>
+         reference_datetime > ymd_hms("2025-01-11 00:00:00")) |>
   select(-reference_datetime) |> 
   dplyr::rename(depth = depth_m) |> 
   mutate(variable = "temperature",
