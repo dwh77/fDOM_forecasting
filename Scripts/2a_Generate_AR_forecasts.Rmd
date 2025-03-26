@@ -112,7 +112,9 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
                       site = site, forecast_depths = forecast_depths, project_id = project_id)
 }
 
-#days loop broke: 07feb2025
+## days loop broke: 07feb2025
+## Days w/ NAs: none
+
 
 ```
 
@@ -154,6 +156,8 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 
 }
 
+## Days w/ NAs: 2apr - 4apr2024
+
 
 ```
 
@@ -180,7 +184,6 @@ output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_
 
 #Loop for 34 day horizon windows
 forecast_date <- seq(ymd("2024-03-01"), ymd("2025-02-28"), by = "day")
-forecast_date <- ymd("2024-12-31")
 forecast_horizon <- 34
 
 
@@ -196,6 +199,7 @@ generate_fDOM_forecast(forecast_date = forecast_date[j], forecast_horizon = fore
 
 }
 
+## Days w/ NAs: 29dec2024 - 7jan2025; 10sep2024 - 15sep2024; 1aug - 4aug2024
 
 ```
 
