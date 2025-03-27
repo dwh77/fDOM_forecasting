@@ -6,10 +6,9 @@ library(arrow)
 
 #### NOTE TO READ
 #NOAA and water temp forecasts parquet files will need to be download to recreate making the generated data
-#You can just copy the 'GeneratedData' folder from zenodo to skip this script 
-#Or you can download the whole zotero folder and recreate making the csvs in the 'GeneratedData' folder
-#In code below you will just have to update the file path in lines w/ 'open_dataset("D:/....)' to the folder 
-#that zenodo data was download.
+#You can just download and copy the 'Data/GeneratedData' folder from zenodo to skip this script 
+#Or you can download and copy the 'Data/Drivers' folder from zenodo to recreate making the csvs in the 'GeneratedData' folder
+getwd()
 
 
 
@@ -17,7 +16,7 @@ library(arrow)
 
 #Getting NOAA forecasts for FCR from 2020-09-30 to 2025-03-19
 #open dataset from stage2 data parquet and summarize to daily data need for models and forecasts
-noaa_fcr <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/noaa/gefs-v12-reprocess/stage2/fcr/") |>
+noaa_fcr <- open_dataset("Data/Drivers/noaa/gefs-v12-reprocess/stage2/fcr/") |>
   mutate(datetime_date = as.Date(datetime)) |>
   group_by(site_id, reference_datetime, datetime_date, variable, parameter) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
@@ -30,7 +29,7 @@ write.csv(noaa_fcr, "Data/GeneratedData/FCR_NOAA_stage2_dailyaverage_27sep20-19m
 
 #Getting NOAA forecasts for CCR from 2020-09-30 to 2025-03-19
 #open dataset from stage2 data parquet and summarize to daily data need for models and forecasts
-noaa_ccr <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/noaa/gefs-v12-reprocess/stage2/ccr/") |>
+noaa_ccr <- open_dataset("Data/Drivers/noaa/gefs-v12-reprocess/stage2/ccr/") |>
   mutate(datetime_date = as.Date(datetime)) |>
   group_by(site_id, reference_datetime, datetime_date, variable, parameter) |>
   summarise(prediction = mean(prediction, na.rm = T), .groups = "drop") |>
@@ -43,7 +42,7 @@ write.csv(noaa_ccr, "Data/GeneratedData/CCR_NOAA_stage2_dailyaverage_27sep20-19m
 #### FCR water temp 4casts ----------------------------------------------------
 
 ## old forecasts from 2022-11-13 to 2024-02-18 (ref date)
-fcr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/backups/") |>
+fcr_flare_old <- open_dataset("Data/Drivers/flare/fcr/backups/") |>
   rename(datetime_date = datetime) |> 
   select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id) |>
   mutate(reference_datetime = ymd_hms(reference_datetime)) |> 
@@ -52,7 +51,7 @@ fcr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/ba
   collect()
 
 ## new forecasts w/ aedV1 model from 2024-03-01 to 2025-01-11 (for ref dates)
-fcr_flare_new_aedv1 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/new/glm_aed_v1/") |>
+fcr_flare_new_aedv1 <- open_dataset("Data/Drivers/flare/fcr/new/glm_aed_v1/") |>
   mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31,
          reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
@@ -66,7 +65,7 @@ fcr_flare_new_aedv1 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/
   collect()
 
 ## new forecasts w/ aedV3 model from 2025-01-12 to 2025-03-19 (for ref dates)
-fcr_flare_new_aedv3 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/fcr/new/glm_aed_flare_v3/") |>
+fcr_flare_new_aedv3 <- open_dataset("Data/Drivers/flare/fcr/new/glm_aed_flare_v3/") |>
   mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31,
          reference_datetime > ymd_hms("2025-01-11 00:00:00")) |>
@@ -90,7 +89,7 @@ write.csv(fcr_water_temp_4cast_data, "Data/GeneratedData/FCR_FLARE_11nov22-19mar
 #### BVR water temp 4casts ----------------------------------------------------
 
 #old forecasts from 2022-11-08 to 2024-02-18 (for ref dates)
-bvr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/bvr/backups/") |> 
+bvr_flare_old <- open_dataset("Data/Drivers/flare/bvr/backups/") |> 
   rename(datetime_date = datetime) |> 
   select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id) |>
   mutate(reference_datetime = ymd_hms(reference_datetime)) |> 
@@ -100,7 +99,7 @@ bvr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/bvr/ba
   
 
 ## new forecasts w/ aedV1 model from 2024-03-01 to 2025-03-20 (for ref dates)
-bvr_flare_new_aedv1 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/bvr/new/glm_flare_v1/") |>
+bvr_flare_new_aedv1 <- open_dataset("Data/Drivers/flare/bvr/new/glm_flare_v1/") |>
   mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31,
          reference_datetime > ymd_hms("2024-02-18 00:00:00")) |> 
@@ -122,7 +121,7 @@ write.csv(bvr_water_temp_4cast_data, "Data/GeneratedData/BVR_FLARE_8nov22-20mar2
 #### CCR water temp 4casts ----------------------------------------------------
 
 #old forecasts from 2023-01-02 to 2024-02-18 (for ref dates)
-ccr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/ccr/backups/") |> 
+ccr_flare_old <- open_dataset("Data/Drivers/flare/ccr/backups/") |> 
   rename(datetime_date = datetime) |> 
   select(reference_datetime, datetime_date, site_id, depth, family, parameter, variable, prediction, model_id) |>
   mutate(reference_datetime = ymd_hms(reference_datetime)) |> 
@@ -131,7 +130,7 @@ ccr_flare_old <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/ccr/ba
   collect()
 
 ## new forecasts w/ aedV1 model from 2024-02-24 to 2025-03-20 (for ref dates)
-ccr_flare_new_aedv1 <- open_dataset("D:/fDOM_4cast_zenodo/archive/drivers/flare/ccr/new/glm_flare_v1/") |>
+ccr_flare_new_aedv1 <- open_dataset("Data/Drivers/flare/ccr/new/glm_flare_v1/") |>
   mutate(parameter = as.numeric(parameter)) |> 
   filter(parameter <= 31,
          reference_datetime > ymd_hms("2024-02-18 00:00:00")) |>

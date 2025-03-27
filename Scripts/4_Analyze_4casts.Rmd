@@ -16,14 +16,9 @@ library(patchwork)
 
 ```{r}
 #read in scores 
-Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_30jan25.csv") |> 
-  ## filter(reference_datetime >= ymd("2023-07-31"),
-  ##        reference_datetime <= ymd("2024-08-01")) |> # Aug 23 - July 24
-    # filter(reference_datetime >= ymd("2023-12-01"),
-    #      reference_datetime <= ymd("2024-11-30")) |>  #Dec 23 - Nov 24
-    #  filter(reference_datetime != ymd("2023-12-28")) |> #fixes insane CCR NNETAR spikes
-  filter(reference_datetime >= ymd("2024-03-01"),
-         reference_datetime <= ymd("2025-02-28")) |>
+Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_27mar25.csv") |> 
+  # filter(reference_datetime >= ymd("2024-03-01"),
+  #        reference_datetime <= ymd("2025-02-28")) |>
   mutate(Horizon = datetime - reference_datetime) |> 
   filter(Horizon > 0, Horizon < 35) |>
   mutate(site_id = ifelse(site_id == "bvre", "BVR", site_id),
@@ -927,6 +922,20 @@ Summary stats of observed data
 
 ```{r}
 ## Summary stats 
+#calibration
+targets |> 
+  filter(datetime >= ymd("2023-03-13"),
+         datetime <= ymd("2024-03-01")
+         ) |> 
+  group_by(site_id) |> 
+  summarise(min = round(min(observation, na.rm = T), 1),
+            median = round(median(observation, na.rm = T), 1),
+            mean = round(mean(observation, na.rm = T), 1),
+            max = round(max(observation, na.rm = T), 1),
+            sd = round(sd(observation, na.rm = T), 1),
+            range = max - min) |> 
+  mutate(CV = round((sd/mean), 2)*100)
+
 targets |> 
   filter(#datetime >= ymd("2023-03-13"),
          datetime >= ymd("2024-03-01")

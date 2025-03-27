@@ -18,7 +18,7 @@ library(score4cast)
 
 ```{r}
 ### Read in df 
-targets_fdom <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
+targets_fdom <- read.csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 
 #rename to match prior code
 allres_targets <- targets_fdom  
@@ -211,39 +211,65 @@ write.csv(allres_MetRegress, "../Data/Forecast_Outputs/MetRegress_4casts/allRese
 
 
 ## Scoring forecast 
-using score4cast to get crps
 
+read in all forecasts csvs
 ```{r}
+#AR
+allres_AR <- read.csv("../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast.csv")
+
+#NNAR
+allRes_NNETAR_output_all <- read.csv("../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast.csv")
+
+#Met Regress
+allres_MetRegress <- read.csv("../Data/Forecast_Outputs/MetRegress_4casts/allReservoir_MetRegress_4cast.csv")
+
+#Rain lag
+allres_RainLag <- read.csv("../Data/Forecast_Outputs/RainLag_4casts/allReservoir_RainLag_4cast.csv")
+
+#Clim
+allres_Clim <- read.csv("../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4cast.csv")
+
+#Persist
+allres_Persist <- read.csv("../Data/Forecast_Outputs/Persist_4casts/allReservoir_Persist_4cast.csv")
+
+
+```
+
+
+using score4cast to get crps
+```{r}
+##uncomment if folders don't exist locally
+# dir.create("../Data/Scores")
+
 ## AR scores 
 AR_scores <- crps_logs_score(allres_AR, allres_targets)
 
-write.csv(AR_scores, "../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast_Scores.csv", row.names = F)
+write.csv(AR_scores, "../Data/Scores/allReservoir_AR_4cast_Scores.csv", row.names = F)
 
 ## RainLag scores 
 RainLag_scores <- crps_logs_score(allres_RainLag, allres_targets)
 
-write.csv(RainLag_scores, "../Data/Forecast_Outputs/RainLag_4casts/allReservoir_RainLag_4cast_Scores.csv", row.names = F)
+write.csv(RainLag_scores, "../Data/Scores/allReservoir_RainLag_4cast_Scores.csv", row.names = F)
 
 ## MetRegress scores 
 MetRegress_scores <- crps_logs_score(allres_MetRegress, allres_targets)
 
-write.csv(MetRegress_scores, "../Data/Forecast_Outputs/MetRegress_4casts/allReservoir_MetRegress_4cast_Scores.csv", row.names = F)
+write.csv(MetRegress_scores, "../Data/Scores/allReservoir_MetRegress_4cast_Scores.csv", row.names = F)
 
 ## nnetar scores 
 nnetar_scores <- crps_logs_score(allRes_NNETAR_output_all, allres_targets)
 
-write.csv(nnetar_scores, "../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast_Scores.csv", row.names = F)
-
+write.csv(nnetar_scores, "../Data/Scores/allReservoir_NNETAR_4cast_Scores.csv", row.names = F)
 
 ## Clim scores 
 Clim_scores <- crps_logs_score(allres_Clim, allres_targets)
 
-write.csv(Clim_scores, "../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4cast_Scores.csv", row.names = F)
+write.csv(Clim_scores, "../Data/Scores/allReservoir_Clim_4cast_Scores.csv", row.names = F)
 
 ## Persist scores 
 Persist_scores <- crps_logs_score(allres_Persist, allres_targets)
 
-write.csv(Persist_scores, "../Data/Forecast_Outputs/Persist_4casts/allReservoir_Persist_4cast_Scores.csv", row.names = F)
+write.csv(Persist_scores, "../Data/Scores/allReservoir_Persist_4cast_Scores.csv", row.names = F)
 
 
 ```
@@ -254,7 +280,7 @@ Bind all scores together and write csv
 ##Bind scores together 
 All_Scores <- rbind(AR_scores, RainLag_scores, MetRegress_scores, nnetar_scores, Clim_scores, Persist_scores)  
 
-write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores_30jan25.csv", row.names = F)
+write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores_27mar25.csv", row.names = F)
 
 ```
 
