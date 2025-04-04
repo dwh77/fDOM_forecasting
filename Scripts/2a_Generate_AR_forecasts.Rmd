@@ -67,10 +67,10 @@ Set up directories to hold forecasts
 
 ```{r}
 ##uncomment if folders don't exist locally
-# dir.create("../Data/Forecast_Outputs/AR_4casts")
-# dir.create("../Data/Forecast_Outputs/AR_4casts/fcre")
-# dir.create("../Data/Forecast_Outputs/AR_4casts/bvre")
-# dir.create("../Data/Forecast_Outputs/AR_4casts/ccre")
+# dir.create("../Data/Forecasts/AR_4casts")
+# dir.create("../Data/Forecasts/AR_4casts/fcre")
+# dir.create("../Data/Forecasts/AR_4casts/bvre")
+# dir.create("../Data/Forecasts/AR_4casts/ccre")
 
 ```
 
@@ -93,7 +93,7 @@ noaa_4cast <- fcr_bvr_noaa_daily
 
 n_members <- 31
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/fcre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/AR_4casts/fcre/", model_id, "_", site, "_")
 
 
 ##Loop for 34 day horizon windows
@@ -136,7 +136,7 @@ noaa_4cast <- fcr_bvr_noaa_daily
 
 n_members <- 31
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/bvre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/AR_4casts/bvre/", model_id, "_", site, "_")
 
 
 #Loop for 34 day horizon windows
@@ -179,7 +179,7 @@ noaa_4cast <- ccr_noaa_daily
 
 n_members <- 31
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/AR_4casts/ccre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/AR_4casts/ccre/", model_id, "_", site, "_")
 
 
 #Loop for 34 day horizon windows

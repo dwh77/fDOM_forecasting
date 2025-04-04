@@ -43,10 +43,10 @@ Set up directories to hold forecasts
 
 ```{r}
 ##uncomment if folders don't exist locally
-# dir.create("../Data/Forecast_Outputs/Persist_4casts")
-# dir.create("../Data/Forecast_Outputs/Persist_4casts/fcre")
-# dir.create("../Data/Forecast_Outputs/Persist_4casts/bvre")
-# dir.create("../Data/Forecast_Outputs/Persist_4casts/ccre")
+# dir.create("../Data/Forecasts/Persist_4casts")
+# dir.create("../Data/Forecasts/Persist_4casts/fcre")
+# dir.create("../Data/Forecasts/Persist_4casts/bvre")
+# dir.create("../Data/Forecasts/Persist_4casts/ccre")
 
 ```
 
@@ -67,7 +67,7 @@ h <- 35
 
 targets_df <- fcr_waterQ
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/Persist_4casts/fcre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/Persist_4casts/fcre/", model_id, "_", site, "_")
 
 
 #### FCR forecast loop
@@ -101,7 +101,7 @@ h <- 35
 
 targets_df <- bvr_waterQ
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/Persist_4casts/bvre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/Persist_4casts/bvre/", model_id, "_", site, "_")
 
 
 #### BVR forecast loop
@@ -136,7 +136,7 @@ h <- 35
 
 targets_df <- ccr_waterQ
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/Persist_4casts/ccre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/Persist_4casts/ccre/", model_id, "_", site, "_")
 
 
 #### CCR forecast loop

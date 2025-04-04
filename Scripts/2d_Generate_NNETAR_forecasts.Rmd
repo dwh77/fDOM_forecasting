@@ -33,8 +33,8 @@ Set up directories to hold forecasts
 
 ```{r}
 ##uncomment lines below if folder don't exist
-# dir.create("../Data/Forecast_Outputs/NNETAR_4casts")
-# dir.create("../Data/Forecast_Outputs/NNETAR_4casts/allRes")
+# dir.create("../Data/Forecasts/NNETAR_4casts")
+# dir.create("../Data/Forecasts/NNETAR_4casts/allRes")
 
 ```
 
@@ -50,7 +50,7 @@ var <- "fDOM_QSU_mean"
 targets_df <- targets_fdom
 forecast_horizon <- 35
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/NNETAR_4casts/allRes/", "NNETAR_allRes_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/NNETAR_4casts/allRes/", "NNETAR_allRes_")
 
 
 for (j in 1:length(forecast_date)) {

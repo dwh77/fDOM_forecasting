@@ -5,7 +5,7 @@ library(tidyverse)
 
 #set directory to write files 
 #current file path is to R project but could use an external drive for more storage
-lake_directory <- ("D:/fDOM4cast_zenodo") #here::here("Data")
+lake_directory <- here::here("Data") #("D:/fDOM4cast_zenodo")
 
 #### NOAA stage 2 ------------------------------------------------
 

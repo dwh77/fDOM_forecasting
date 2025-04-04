@@ -8,7 +8,7 @@ library(arrow)
 #NOAA and water temp forecasts parquet files will need to be download to recreate making the generated data
 #You can just download and copy the 'Data/GeneratedData' folder from zenodo to skip this script 
 #Or you can download and copy the 'Data/Drivers' folder from zenodo to recreate making the csvs in the 'GeneratedData' folder
-getwd()
+#The script 0a created the parquet files that can be found on zenodo. The script could be rerun, but drivers are provided in zenodo in case urls in 0a change over time
 
 
 

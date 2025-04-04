@@ -53,10 +53,10 @@ Set up directories to hold forecasts
 
 ```{r}
 ##uncomment if folders don't exist
-# dir.create("../Data/Forecast_Outputs/MetRegress_4casts")
-# dir.create("../Data/Forecast_Outputs/MetRegress_4casts/fcre")
-# dir.create("../Data/Forecast_Outputs/MetRegress_4casts/bvre")
-# dir.create("../Data/Forecast_Outputs/MetRegress_4casts/ccre")
+# dir.create("../Data/Forecasts/MetRegress_4casts")
+# dir.create("../Data/Forecasts/MetRegress_4casts/fcre")
+# dir.create("../Data/Forecasts/MetRegress_4casts/bvre")
+# dir.create("../Data/Forecasts/MetRegress_4casts/ccre")
 
 ```
 
@@ -84,7 +84,7 @@ calibration_start_date <- ymd("2023-03-13")
 targets_df <- fcr_waterQ
 noaa_4cast <- fcr_bvr_noaa_daily
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/MetRegress_4casts/fcre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/MetRegress_4casts/fcre/", model_id, "_", site, "_")
 
 
 #run forecasts
@@ -129,7 +129,7 @@ calibration_start_date <- ymd("2023-03-13")
 targets_df <- bvr_waterQ
 noaa_4cast <- fcr_bvr_noaa_daily
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/MetRegress_4casts/bvre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/MetRegress_4casts/bvre/", model_id, "_", site, "_")
 
 
 #run forecasts
@@ -172,7 +172,7 @@ calibration_start_date <- ymd("2023-03-13")
 targets_df <- ccr_waterQ
 noaa_4cast <- ccr_noaa_daily
 
-output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecast_Outputs/MetRegress_4casts/ccre/", model_id, "_", site, "_")
+output_folder <- paste0((str_sub(getwd(), end = -8)), "Data/Forecasts/MetRegress_4casts/ccre/", model_id, "_", site, "_")
 
 
 #run forecasts
