@@ -1,0 +1,1 @@
+Folder to hold forecast scores if you are interested in rerunning the entire analysis.
