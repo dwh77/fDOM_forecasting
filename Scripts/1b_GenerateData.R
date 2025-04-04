@@ -151,13 +151,19 @@ write.csv(ccr_water_temp_4cast_data, "Data/GeneratedData/CCR_FLARE_2jan23-20mar2
 
 #### FCR, BVR, and CCR fDOM target data  ------------------------------------------
 
+
 #set p for temp corrections 
 p <- -0.01
 
 #### FCR Water Q data
 fcr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/FCRE-data/refs/heads/fcre-catwalk-data-qaqc/fcre-waterquality_L1.csv")
+fcr_L1 <- fcr_L1 |> #remove obvious wiper issues
+  filter(EXOfDOM_QSU_1 < 30) |> 
+  filter(EXOfDOM_QSU_1 > 10)
 fcr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/271/9/f23d27b67f71c25cb8e6232af739f986" )
 fcrfull <- rbind(fcr_edi, fcr_L1)
+
+write.csv(fcrfull, "Data/FCR_catwalk_10min.csv", row.names = F)
 
 fcr_waterQ <- fcrfull |> 
   mutate(fdom_TC = EXOfDOM_QSU_1/(1 + (p*(EXOTemp_C_1 - 20)) )   ) |> 
@@ -167,14 +173,16 @@ fcr_waterQ <- fcrfull |>
   mutate(site_id = "fcre",
          depth_m = 1.6) |> 
   select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
-  rename(datetime = Date) |> 
-  filter(datetime < ymd("2025-03-19")) #### SINCE march 19th was midday when run; run 19mar25 - april when updating
+  rename(datetime = Date) 
 
 
 #### BVR Water Q data
 bvr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/BVRE-data/refs/heads/bvre-platform-data-qaqc/bvre-waterquality_L1.csv")
 bvr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/725/5/f649de0e8a468922b40dcfa34285055e" )
 bvrfull <- rbind(bvr_edi, bvr_L1)
+
+write.csv(bvrfull, "Data/BVR_catwalk_10min.csv", row.names = F)
+
 
 bvr_waterQ <- bvrfull |> 
   mutate(fdom_TC = EXOfDOM_QSU_1.5/(1 + (p*(EXOTemp_C_1.5 - 20)) )   ) |> 
@@ -184,14 +192,16 @@ bvr_waterQ <- bvrfull |>
   mutate(site_id = "bvre",
          depth_m = 1.5) |> 
   select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
-  rename(datetime = Date) |> 
-  filter(datetime < ymd("2025-03-19")) #### SINCE march 19th was midday when run; run 19mar25 - april when updating
+  rename(datetime = Date) 
 
 
 #### CCR water Q data
 ccr_L1 <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
 ccr_edi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854")
 ccrfull <- rbind(ccr_edi, ccr_L1)
+
+write.csv(ccrfull, "Data/CC_catwalk_10min.csv", row.names = F)
+
 
 ccr_waterQ <- ccrfull |> 
   mutate(fdom_TC = EXOfDOM_QSU_1/(1 + (p*(EXOTemp_C_1 - 20)) )   ) |> 
@@ -201,8 +211,7 @@ ccr_waterQ <- ccrfull |>
   mutate(site_id = "ccre",
          depth_m = 1.5) |> 
   select(Date, site_id, depth_m, fDOM_QSU_mean) |> 
-  rename(datetime = Date) |> 
-  filter(datetime < ymd("2025-03-19")) #### SINCE march 19th was midday when run; run 19mar25 - april when updating
+  rename(datetime = Date) 
 
 
 ####bind reservoirs together and write csv

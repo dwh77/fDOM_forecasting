@@ -31,21 +31,21 @@ allres_targets <- targets_fdom
 ```{r}
 #FCR AR forecasts
 #bind forecast outputs into one data frame 
-fcr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+fcr_AR_output_all <- list.files(path = "../Data/Forecasts/AR_4casts/fcre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #BVR AR forecasts
 #bind forecast outputs into one data frame 
-bvr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+bvr_AR_output_all <- list.files(path = "../Data/Forecasts/AR_4casts/bvre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #CCR AR forecasts
 #bind forecast outputs into one data frame 
-ccr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+ccr_AR_output_all <- list.files(path = "../Data/Forecasts/AR_4casts/ccre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
@@ -53,7 +53,7 @@ ccr_AR_output_all <- list.files(path = "../Data/Forecast_Outputs/AR_4casts/ccre"
 #Compile AR forecasts and write csv
 allres_AR <- rbind(fcr_AR_output_all, bvr_AR_output_all, ccr_AR_output_all)
 
-write.csv(allres_AR, "../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast.csv", row.names = F)
+write.csv(allres_AR, "../Data/Forecasts/AR_4casts/allReservoir_AR_4cast.csv", row.names = F)
 
 
 ```
@@ -65,13 +65,13 @@ write.csv(allres_AR, "../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast.c
 All reservoir NNETAR forecasts
 ```{r}
 #bind forecast outputs into one data frame 
-allRes_NNETAR_output_all <- list.files(path = "../Data/Forecast_Outputs/NNETAR_4casts/allRes", pattern = "*.csv", full.names = T) |> 
+allRes_NNETAR_output_all <- list.files(path = "../Data/Forecasts/NNETAR_4casts/allRes", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #write csv of all data together
-write.csv(allRes_NNETAR_output_all, "../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast.csv", row.names = F)
+write.csv(allRes_NNETAR_output_all, "../Data/Forecasts/NNETAR_4casts/allReservoir_NNETAR_4cast.csv", row.names = F)
 
 
 ```
@@ -83,21 +83,21 @@ write.csv(allRes_NNETAR_output_all, "../Data/Forecast_Outputs/NNETAR_4casts/allR
 ```{r}
 #FCR Clim forecasts
 #bind forecast outputs into one data frame 
-fcr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+fcr_Clim_output_all <- list.files(path = "../Data/Forecasts/Clim_4casts/fcre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #BVR Clim forecasts
 #bind forecast outputs into one data frame 
-bvr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+bvr_Clim_output_all <- list.files(path = "../Data/Forecasts/Clim_4casts/bvre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #CCR Clim forecasts
 #bind forecast outputs into one data frame 
-ccr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+ccr_Clim_output_all <- list.files(path = "../Data/Forecasts/Clim_4casts/ccre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
@@ -105,7 +105,7 @@ ccr_Clim_output_all <- list.files(path = "../Data/Forecast_Outputs/Clim_4casts/c
 #Compile Clim forecasts and write csv
 allres_Clim <- rbind(fcr_Clim_output_all, bvr_Clim_output_all, ccr_Clim_output_all)
 
-write.csv(allres_Clim, "../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4cast.csv", row.names = F)
+write.csv(allres_Clim, "../Data/Forecasts/Clim_4casts/allReservoir_Clim_4cast.csv", row.names = F)
 
 
 ```
@@ -117,21 +117,21 @@ write.csv(allres_Clim, "../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4
 ```{r}
 #FCR Persist forecasts
 #bind forecast outputs into one data frame 
-fcr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+fcr_Persist_output_all <- list.files(path = "../Data/Forecasts/Persist_4casts/fcre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #BVR Persist forecasts
 #bind forecast outputs into one data frame 
-bvr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+bvr_Persist_output_all <- list.files(path = "../Data/Forecasts/Persist_4casts/bvre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #CCR Persist forecasts
 #bind forecast outputs into one data frame 
-ccr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+ccr_Persist_output_all <- list.files(path = "../Data/Forecasts/Persist_4casts/ccre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
@@ -139,7 +139,7 @@ ccr_Persist_output_all <- list.files(path = "../Data/Forecast_Outputs/Persist_4c
 #Compile Persist forecasts and write csv
 allres_Persist <- rbind(fcr_Persist_output_all, bvr_Persist_output_all, ccr_Persist_output_all)
 
-write.csv(allres_Persist, "../Data/Forecast_Outputs/Persist_4casts/allReservoir_Persist_4cast.csv", row.names = F)
+write.csv(allres_Persist, "../Data/Forecasts/Persist_4casts/allReservoir_Persist_4cast.csv", row.names = F)
 
 ```
 
@@ -150,28 +150,28 @@ write.csv(allres_Persist, "../Data/Forecast_Outputs/Persist_4casts/allReservoir_
 ```{r}
 #FCR RainLab forecasts
 #bind forecast outputs into one data frame 
-fcr_RainLag_output_all <- list.files(path = "../Data/Forecast_Outputs/RainLag_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+fcr_RainLag_output_all <- list.files(path = "../Data/Forecasts/RainLag_4casts/fcre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #BVR RainLab forecasts
 #bind forecast outputs into one data frame 
-bvr_RainLag_output_all <- list.files(path = "../Data/Forecast_Outputs/RainLag_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+bvr_RainLag_output_all <- list.files(path = "../Data/Forecasts/RainLag_4casts/bvre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #CCR RainLab forecasts
 #bind forecast outputs into one data frame 
-ccr_RainLag_output_all <- list.files(path = "../Data/Forecast_Outputs/RainLag_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+ccr_RainLag_output_all <- list.files(path = "../Data/Forecasts/RainLag_4casts/ccre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 #Compile RainLag forecasts and write csv
 allres_RainLag <- rbind(fcr_RainLag_output_all, bvr_RainLag_output_all, ccr_RainLag_output_all)
 
-write.csv(allres_RainLag, "../Data/Forecast_Outputs/RainLag_4casts/allReservoir_RainLag_4cast.csv", row.names = F)
+write.csv(allres_RainLag, "../Data/Forecasts/RainLag_4casts/allReservoir_RainLag_4cast.csv", row.names = F)
 
 ```
 
@@ -182,21 +182,21 @@ write.csv(allres_RainLag, "../Data/Forecast_Outputs/RainLag_4casts/allReservoir_
 ```{r}
 #FCR MetRegress forecasts
 #bind forecast outputs into one data frame 
-fcr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegress_4casts/fcre", pattern = "*.csv", full.names = T) |> 
+fcr_MetRegress_output_all <- list.files(path = "../Data/Forecasts/MetRegress_4casts/fcre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()  
 
 
 #BVR MetRegress forecasts
 #bind forecast outputs into one data frame 
-bvr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegress_4casts/bvre", pattern = "*.csv", full.names = T) |> 
+bvr_MetRegress_output_all <- list.files(path = "../Data/Forecasts/MetRegress_4casts/bvre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()
 
 
 #CCR MetRegress forecasts
 #bind forecast outputs into one data frame 
-ccr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegress_4casts/ccre", pattern = "*.csv", full.names = T) |> 
+ccr_MetRegress_output_all <- list.files(path = "../Data/Forecasts/MetRegress_4casts/ccre", pattern = "*.csv", full.names = T) |> 
   base::lapply(read_csv) |> 
   bind_rows()
 
@@ -204,7 +204,7 @@ ccr_MetRegress_output_all <- list.files(path = "../Data/Forecast_Outputs/MetRegr
 #Compile MetRegress forecasts and write csv
 allres_MetRegress <- rbind(fcr_MetRegress_output_all, bvr_MetRegress_output_all, ccr_MetRegress_output_all)
 
-write.csv(allres_MetRegress, "../Data/Forecast_Outputs/MetRegress_4casts/allReservoir_MetRegress_4cast.csv", row.names = F)
+write.csv(allres_MetRegress, "../Data/Forecasts/MetRegress_4casts/allReservoir_MetRegress_4cast.csv", row.names = F)
 
 
 ```
@@ -215,22 +215,22 @@ write.csv(allres_MetRegress, "../Data/Forecast_Outputs/MetRegress_4casts/allRese
 read in all forecasts csvs
 ```{r}
 #AR
-allres_AR <- read.csv("../Data/Forecast_Outputs/AR_4casts/allReservoir_AR_4cast.csv")
+allres_AR <- read.csv("../Data/Forecasts/AR_4casts/allReservoir_AR_4cast.csv")
 
 #NNAR
-allRes_NNETAR_output_all <- read.csv("../Data/Forecast_Outputs/NNETAR_4casts/allReservoir_NNETAR_4cast.csv")
+allRes_NNETAR_output_all <- read.csv("../Data/Forecasts/NNETAR_4casts/allReservoir_NNETAR_4cast.csv")
 
 #Met Regress
-allres_MetRegress <- read.csv("../Data/Forecast_Outputs/MetRegress_4casts/allReservoir_MetRegress_4cast.csv")
+allres_MetRegress <- read.csv("../Data/Forecasts/MetRegress_4casts/allReservoir_MetRegress_4cast.csv")
 
 #Rain lag
-allres_RainLag <- read.csv("../Data/Forecast_Outputs/RainLag_4casts/allReservoir_RainLag_4cast.csv")
+allres_RainLag <- read.csv("../Data/Forecasts/RainLag_4casts/allReservoir_RainLag_4cast.csv")
 
 #Clim
-allres_Clim <- read.csv("../Data/Forecast_Outputs/Clim_4casts/allReservoir_Clim_4cast.csv")
+allres_Clim <- read.csv("../Data/Forecasts/Clim_4casts/allReservoir_Clim_4cast.csv")
 
 #Persist
-allres_Persist <- read.csv("../Data/Forecast_Outputs/Persist_4casts/allReservoir_Persist_4cast.csv")
+allres_Persist <- read.csv("../Data/Forecasts/Persist_4casts/allReservoir_Persist_4cast.csv")
 
 
 ```
@@ -280,7 +280,7 @@ Bind all scores together and write csv
 ##Bind scores together 
 All_Scores <- rbind(AR_scores, RainLag_scores, MetRegress_scores, nnetar_scores, Clim_scores, Persist_scores)  
 
-write.csv(All_Scores, "../Data/allReservoir_allmodel_4cast_Scores_27mar25.csv", row.names = F)
+write.csv(All_Scores, "../Data/Scores/allReservoir_allmodel_4cast_Scores_4apr25.csv", row.names = F)
 
 ```
 
