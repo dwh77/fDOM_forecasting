@@ -16,9 +16,7 @@ library(patchwork)
 
 ```{r}
 #read in scores 
-Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_27mar25.csv") |> 
-  # filter(reference_datetime >= ymd("2024-03-01"),
-  #        reference_datetime <= ymd("2025-02-28")) |>
+Scored_forecasts <- read_csv("../Data/allReservoir_allmodel_4cast_Scores_4apr25.csv") |> 
   mutate(Horizon = datetime - reference_datetime) |> 
   filter(Horizon > 0, Horizon < 35) |>
   mutate(site_id = ifelse(site_id == "bvre", "BVR", site_id),
@@ -45,7 +43,7 @@ model_shape <- c("Data Driven" = 1, "Baseline" = 4)
 ## Checks on missing data and forecasts 
 
 
-explore missing AR day 
+number of missing AR day 
 
 ```{r}
 
@@ -55,35 +53,6 @@ AR <- Scored_forecasts |> filter(model_id == "TS_AR")
 AR_na <- AR |> filter(is.na(observation))
 missdateslist <- unique(AR_na$datetime)
 AR_na2 <- AR_na |> filter(datetime %in% missdateslist)
-
-#no forecast mean
-ARmeanNA <- AR |> filter(is.na(mean))
-unique(ARmeanNA$reference_datetime)
-
-```
-
-
-
-explore DOY issues 
-
-```{r}
-doy <- Scored_forecasts |> filter(model_id == "DOY")
-
-doy_na <- doy |> filter(is.na(crps))
-unique(doy_na$datetime)
-
-per <- Scored_forecasts |> filter(model_id == "Persistence")
-
-
-doy2 <- doy |> filter(Horizon == 1)
-
-doy3 <- doy2 |> filter(is.na(crps))
-
-unique(doy3$reference_datetime)
-
-doy4 <- doy2 |> filter(is.na(mean))
-
-doy5 <- doy2 |> filter(is.na(observation))
 
 
 ```
@@ -148,7 +117,7 @@ ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
 
 SI_all_metrics_over_horizon
 
-#ggsave("../Figures/SI_allmetrics_Horizon.png", SI_all_metrics_over_horizon, height = 6, width = 6, units = "in")
+#ggsave("../Figures/figS2_allmetrics_Horizon.png", SI_all_metrics_over_horizon, height = 6, width = 6, units = "in")
 
 ```
 
@@ -341,7 +310,7 @@ skill_rmse_plot <- skill_df |>
 all_skill_SI <- skill_rmse_plot / skill_crps_plot
 
 all_skill_SI
-#ggsave("../Figures/all_skill_SI.png", all_skill_SI, height = 8, width = 6, units = "in")
+#ggsave("../Figures/figS3_all_skill_SI.png", all_skill_SI, height = 8, width = 6, units = "in")
 
 
 ```
@@ -352,16 +321,14 @@ RMSE combined plot
 
 #RMSE horizon plot
 rmse_for_join <- rbind(a,b) |> 
-  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ #, linetype = model_type
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ 
   geom_line(linewidth = 1.2)+
   facet_wrap(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "fixed", ncol = 4)+
-  # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
-  # ylim(0.5,5.2)+
+
   labs(x = "Horizon", y = "RMSE (QSU)", color = "Model ID", linetype = "Model Type")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   guides(linetype = guide_legend(nrow = 2))+
-  #theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10))+
   scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
 
 #RMSE persistence skill plot
@@ -374,8 +341,6 @@ skill_for_join <- skill_df |>
   facet_grid(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
-  # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
-  #guides(colour = guide_legend(nrow = 2))+
   labs(x = "Horizon", y = "Forecast Skill", color = "Model ID")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -385,7 +350,7 @@ rmse_skill_combo <- ggpubr::ggarrange(rmse_for_join, skill_for_join, ncol = 1, l
 
 rmse_skill_combo
 
-#ggsave("../Figures/RMSE_and_Skill_combo_MS.png", rmse_skill_combo, height = 6, width = 6.1, units = "in")
+#ggsave("../Figures/fig5_RMSE_and_Skill_combo_MS.png", rmse_skill_combo, height = 6, width = 6.1, units = "in")
 
 
 
@@ -411,79 +376,10 @@ plotly::ggplotly(skill_for_join)
 
 
 
-across sites and horizon
+
+Make tables for MS: Table 2 (RMSE) and S1 (CRPS); and SD stats for Supp Text S1
 
 ```{r}
-
-## CRPS
-Scored_forecasts |> 
-   group_by(model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = mean(crps, na.rm = T),
-             SD = mean(sd, na.rm = T)
-            ) |>     pivot_longer(-c(1:3)) |>
-  filter(name == "CRPS") |>
-  group_by(model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),        range = max - min    )
-
-##RMSE
-Scored_forecasts |> 
-   group_by(model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = mean(crps, na.rm = T),
-             SD = mean(sd, na.rm = T)
-            ) |>     pivot_longer(-c(1:3)) |>
-  filter(name == "RMSE") |>
-  group_by(model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),        range = max - min    )
-
-##SD
-Scored_forecasts |> 
-   group_by(model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = mean(crps, na.rm = T),
-             SD = mean(sd, na.rm = T)
-            ) |>     pivot_longer(-c(1:3)) |>
-  filter(name == "SD") |>
-  group_by(model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),        range = max - min    )
-
-
-## SKill; use plotly plots above
-skill_df |> 
-  filter(Null == "Skill_Peristence") |> 
-  select(site_id, Horizon, model_idA, metric, Null, value)  |> 
-  filter(metric == "rmse") |> 
-  group_by(site_id, model_idA) |>   summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),        range = max - min    )
-
-
-
-```
-
-
-Make table for MS
-
-```{r}
-#figure
-rbind(c,d) |> 
-  filter(!name %in% c("MAE")) |> 
-ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
-  geom_line(linewidth = 1.2)+
-  facet_grid(name~factor(site_id, levels = c("Across Sites","BVR", "CCR", "FCR")), scales = "free_y")+
-  labs(x = "Horizon", y = "Metric (QSU)")+
-  theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
-  guides(linetype = guide_legend(nrow = 2))+
-  theme(legend.text = element_text(size = 8), legend.title = element_text(size = 10))+
-  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
-
 
 ########################################## RMSE  #
 
@@ -528,95 +424,29 @@ rbind(c,d) |>
   select(site_id, name, median, min, max, range)
 
 
-
-```
-
-
-reservoir specific
-
-```{r}
-
-#RMSE horizon across reservoirs 
-Scored_forecasts |> 
-   group_by(site_id, model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = mean(crps, na.rm = T),
-             SD = mean(sd, na.rm = T)
-            ) |>     pivot_longer(-c(1:4)) |>
+############################## SD #
+#across sites and all models 
+rbind(c,d) |> 
+  group_by(site_id, model_id, name) |> 
   filter(name == "SD") |> 
-  group_by(model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
+  summarise(min = round(min(value, na.rm = T),1),
             mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),        range = max - min    )
-
-#RMSE horizon by reservoir
-Scored_forecasts |> 
-   group_by(site_id, model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = mean(crps, na.rm = T),
-             SD = mean(sd, na.rm = T)
-            ) |> 
-    pivot_longer(-c(1:4)) |>  filter(name == "RMSE") |> 
-  group_by(site_id, model_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),  median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),       range = max - min           )
-
-#by reservoir no model ID or horizon
-Scored_forecasts |> 
-   group_by(site_id, model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = mean(crps, na.rm = T),
-             SD = mean(sd, na.rm = T)
-            ) |> 
-    pivot_longer(-c(1:4)) |>  filter(name == "CRPS") |> 
-  group_by(site_id, name) |>   summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),      range = max - min        )
+            max = round(max(value, na.rm = T),1),        range = max - min    ) |> 
+  select(site_id, model_id, name, median, min, max, range)
 
 
-
-#### show 16days as columns 
-Scored_forecasts |> 
-   group_by(site_id, model_id, model_type, Horizon) |> 
-   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 1),
-             #MAE = mean(abs(mean - observation), na.rm = T),
-             CRPS = round(mean(crps, na.rm = T), 1),
-             SD = mean(sd, na.rm = T)
-            ) |> 
-    pivot_longer(-c(1:4)) |>  filter(name == "CRPS") |> 
-  filter(model_id %in% c("TS_AR", "Persistence")) |> 
-  pivot_wider(names_from = Horizon, values_from = value)
+#across sites and models 
+rbind(c,d) |> 
+  group_by(site_id, name) |> 
+  filter(name == "SD") |> 
+  summarise(min = round(min(value, na.rm = T),1),
+            mean = round(mean(value, na.rm = T),1), median = round(median(value, na.rm = T),1),
+            max = round(max(value, na.rm = T),1),        range = max - min    ) |> 
+  select(site_id, name, median, min, max, range)
 
 
 ```
 
-
-
-Skill stats 
-
-```{r}
-### Horizons as column names
-skill_horizon <- skill_df |> 
-  mutate(value = round(value, 1)) |> 
-  mutate(NullA = ifelse(Null == "Skill_Climatology", "DOY", "Persistence")) |> 
-  select(site_id, Horizon, model_idA, metric, NullA, value) |> 
-  pivot_wider(names_from = Horizon, values_from = value) |> 
-  arrange(site_id, model_idA, metric, NullA)
-
-skill_horizon
-
-skill_horizon |>
-  filter(
-    #site_id %in% c("Across Sites"),
-    model_idA == "TS_AR",
-    metric == "rmse", NullA == "Persistence"
-  )
-
-
-
-```
 
 
 
@@ -665,7 +495,7 @@ rmse_season_v2 <- rbind(e,f) |>
 
 rmse_season_v2
 
-#ggsave("../Figures/rmse_season_SI.png", rmse_season_v2, height = 5.5, width = 6.5, units = "in")
+#ggsave("../Figures/Fig_S4_rmse_season_SI.png", rmse_season_v2, height = 5.5, width = 6.5, units = "in")
 
 
 
@@ -686,7 +516,7 @@ rmse_seasons_avgModels <- rbind(e,f) |>
 
 rmse_seasons_avgModels
 
-#ggsave("../Figures/rmse_season_modelAVG.png", rmse_seasons_avgModels, height = 3.5, width = 6, units = "in")
+#ggsave("../Figures/Fig6_rmse_season_modelAVG.png", rmse_seasons_avgModels, height = 3.5, width = 6, units = "in")
 
 
 
@@ -697,56 +527,7 @@ Seasons stats
 
 ```{r}
 
-#######OLD 
-
-#seasons
-Scored_forecasts_seasons |> 
-  group_by(model_id, Season2, site_id) |> 
-  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |> 
-  pivot_wider(names_from = Season2, values_from = RMSE)
-
-
-#just season 
-Scored_forecasts_seasons |> 
-  group_by(Season2, Horizon) |> 
-  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-            CRPS = round(mean(crps, na.rm = T),2)) |> 
-  pivot_longer(-c(1:2)) |> 
-  group_by(name, Season2) |> 
-  summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),      range = max - min        )
-
-
-
-#season and site
-Scored_forecasts_seasons |> 
-  group_by(site_id, Season2, Horizon) |> 
-  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-            CRPS = round(mean(crps, na.rm = T),2)) |> 
-  # pivot_wider(names_from = Season2, values_from = CRPS) |> 
-  pivot_longer(-c(1:3)) |> 
-  group_by(name, site_id, Season2) |> 
-  summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),      range = max - min        )
-
-
-#just season
-Scored_forecasts_seasons |> 
-  group_by(site_id, Season2, Horizon) |> 
-  summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2),
-            CRPS = round(mean(crps, na.rm = T),2)) |> 
-  # pivot_wider(names_from = Season2, values_from = CRPS) |> 
-  pivot_longer(-c(1:3)) |> 
-  group_by(name,  Season2) |> 
-  summarise(min = round(min(value, na.rm = T),1),
-            mean = round(mean(value, na.rm = T),1),      median = round(median(value, na.rm = T),1),
-            max = round(max(value, na.rm = T),1),      range = max - min        )
-
-
-
-##### NEW 
+##### stats by reservoir, across reservoir for seasons  
 rbind(e,f) |> 
   ungroup() |> 
   group_by(Horizon, site_id, Season2) |> 
@@ -757,6 +538,8 @@ rbind(e,f) |>
             max = round(max(RMSE, na.rm = T),1),      range = max - min        )
 
 
+# look at range across models by horizon
+plotly::ggplotly(rmse_season_v2)
 
 ```
 
@@ -854,27 +637,20 @@ targets <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 
 fdom_TS <- targets |> 
   filter(datetime >= ymd("2023-03-13"),
-         #datetime >= ymd("2024-03-01")
-         # datetime < ymd("2024-12-01")
+         datetime <+ ymd("2025-04-03")
          ) |> 
   mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
          site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
          site_id_A = ifelse(site_id == "ccre", "CCR", site_id_A)) |> 
   ggplot(aes(x = datetime, y = observation, color = site_id_A))+
-   # geom_rect(aes(xmin = ymd("2023-03-13"), xmax = ymd("2024-03-01"), ymin = -Inf, ymax = Inf), 
-   #           alpha = 0.01, fill = "gray", color = NA )+ 
   geom_vline(xintercept = ymd("2024-03-01"), linetype = 2, linewidth = 1.2)+
-    annotate("text", x = as.Date("2023-08-15"), y = 28, label = "Calibration", color = "black", size = 4, fontface = "bold")+
-    annotate("text", x = as.Date("2024-05-15"), y = 28, label = "Forecasting", color = "black", size = 4, fontface = "bold")+
+    annotate("text", x = as.Date("2023-08-15"), y = 28, label = "Calibration", 
+             color = "black", size = 4, fontface = "bold")+
+    annotate("text", x = as.Date("2024-05-15"), y = 28, label = "Forecasting", 
+             color = "black", size = 4, fontface = "bold")+
   geom_point()+
-  # annotate(geom = "point", x = ymd("2023-11-01"), y = 28, shape = 15, size = 3, color = "#009E73", alpha = 0.7)+
-  # annotate(geom = "point", x = ymd("2023-11-02"), y = 27.7, shape = 15, size = 3, color = "orange", alpha = 0.7)+
-  # annotate(geom = "point", x = ymd("2023-11-14"), y = 28, shape = 15, size = 3, color = "skyblue", alpha = 0.7)+
-  # annotate(geom = "point", x = ymd("2024-03-02"), y = 28, shape = 17, size = 3, color = "#009E73", alpha = 0.7)+
-  # annotate(geom = "point", x = ymd("2024-03-01"), y = 28, shape = 17, size = 3, color = "orange", alpha = 0.7)+
-  # annotate(geom = "point", x = ymd("2024-03-03"), y = 28, shape = 17, size = 3, color = "skyblue", alpha = 0.7)+
-  scale_x_date(date_breaks = "2 month", date_labels = "%b" )+
   scale_y_continuous(limits = c(3,28), breaks = c(5,10,15,20,25))+
+  scale_x_date(date_labels = "%b", breaks = "2 months")+
   labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
@@ -882,7 +658,7 @@ fdom_TS <- targets |>
 
 fdom_TS
 
-#ggsave("../Figures/Observed_FDOM_TS.png", fdom_TS, height = 4, width = 6.5, units = "in")
+#ggsave("../Figures/Fig4_Observed_FDOM_TS.png", fdom_TS, height = 4, width = 6.5, units = "in")
 
 
 
@@ -915,17 +691,39 @@ plotly::ggplotly(turnover_helene_plot)
 ###Turnover numbers
 
 
+##### FEb 2025 storm plots 
+febstorm_plot <- targets |>
+  filter(datetime >= ymd("2025-01-15"),
+         datetime < ymd("2025-02-28") ) |>
+  mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
+         site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
+         site_id_A = ifelse(site_id == "ccre", "CCR", site_id_A)) |>
+  ggplot(aes(x = datetime, y = observation, color = site_id_A))+
+  geom_point()+ geom_vline(xintercept = ymd("2025-02-10"))+
+  labs(x = "Date", y = "fDOM (QSU)", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
+
+febstorm_plot
+plotly::ggplotly(febstorm_plot)
+
+###Feb storm numbers
+##CCR fDOM level rises from 12.9 to 16.7 QSU (3.8 QSU), w/ max of 18.6 (5.7) between 11feb25 (day before) and 21feb25 (10 days after)
+##BVR fDOM level rises from 10.6 to 10.4 QSU w/ min of 10.1 between 11feb25 (day before) and 21feb25 (10 days after)
+##FCR fDOM level rises from 14.1 to 17.0 QSU (2.9 QSU) w/ max of 18.2 between 11feb25 (day before) and 21feb25 (10 days after)
+
+
 
 ```
 
 Summary stats of observed data
 
 ```{r}
-## Summary stats 
-#calibration
+#calibration period 
 targets |> 
   filter(datetime >= ymd("2023-03-13"),
-         datetime <= ymd("2024-03-01")
+         datetime <= ymd("2024-02-28")
          ) |> 
   group_by(site_id) |> 
   summarise(min = round(min(observation, na.rm = T), 1),
@@ -934,28 +732,16 @@ targets |>
             max = round(max(observation, na.rm = T), 1),
             sd = round(sd(observation, na.rm = T), 1),
             range = max - min) |> 
-  mutate(CV = round((sd/mean), 2)*100)
+  mutate(CV = round((sd/mean), 2)*100) |> 
+  mutate(Time = "Calibration")
 
-targets |> 
-  filter(#datetime >= ymd("2023-03-13"),
-         datetime >= ymd("2024-03-01")
-         # datetime < ymd("2024-12-01")
-         ) |> 
-  group_by(site_id) |> 
-  summarise(min = round(min(observation, na.rm = T), 1),
-            median = round(median(observation, na.rm = T), 1),
-            mean = round(mean(observation, na.rm = T), 1),
-            max = round(max(observation, na.rm = T), 1),
-            sd = round(sd(observation, na.rm = T), 1),
-            range = max - min) |> 
-  mutate(CV = round((sd/mean), 2)*100)
 
+#### FOrecasting period 
 
 #cleaned stats for full year for table in MS 
 targets |> 
-  filter(#datetime >= ymd("2023-03-13"),
-         datetime >= ymd("2024-03-01")
-         # datetime < ymd("2024-12-01")
+  filter(datetime >= ymd("2024-03-01"),
+         datetime <= ymd("2025-04-03")
          ) |> 
   group_by(site_id) |> 
   summarise(min = round(min(observation, na.rm = T), 1),
@@ -976,9 +762,8 @@ targets |>
          Season2 = ifelse(month %in% c(9,10,11), "Fall", Season2),
          Season2 = ifelse(month %in% c(1,2,12), "Winter", Season2)
          ) |> 
-  filter(#datetime >= ymd("2023-03-13"),
-         datetime >= ymd("2024-03-01")
-         # datetime < ymd("2024-12-01")
+  filter(datetime >= ymd("2024-03-01"),
+         datetime <= ymd("2025-04-03")
          ) |> 
   group_by(site_id, Season2) |> 
   summarise(min = round(min(observation, na.rm = T), 1),
@@ -1000,126 +785,98 @@ targets |>
 ```
 
 
-Calculate turnover dates; FCR and BVR
-
-```{r}
-# targets_url <- "https://renc.osn.xsede.org/bio230121-bucket01/vera4cast/targets/project_id=vera4cast/duration=P1D/daily-insitu-targets.csv.gz"
-# 
-# #### FCR
-# ##FCR 2023-11-01 mixes: 2024-03-02 re strats; 2024-10-28 mixes
-# fcre_turnover <- read_csv(targets_url) |>
-#   select(-project_id, -duration) |>
-#   filter(site_id == "fcre",
-#          depth_m %in% c(0.1, 9)) |>
-#   filter(variable == "Temp_C_mean",
-#          datetime > ymd("2023-04-13")) |>
-#   pivot_wider(names_from = depth_m, values_from = observation) |>
-#   rename(wtr_01 = 5,
-#          wtr_9 =4) |>
-#   mutate(Temp_diff = wtr_01 - wtr_9)
-# 
-# 
-# #### BVR
-# ##BVR - 2023-11-01 mixes: 2024-03-02 re strats; 2024-11-16 mixes
-# bvre_turnover <- read_csv(targets_url) |>
-#   select(-project_id, -duration) |>
-#     filter(variable == "Temp_C_mean",
-#          datetime > ymd("2023-04-13"),
-#          site_id == "bvre") |>
-#   filter(depth_m > 9 | depth_m < 1) |>
-#   pivot_wider(names_from = depth_m, values_from = observation) 
-#
-#
-# #### CCR
-# ccrgit <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
-# ccredi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854")
-# ccrfull <- rbind(ccredi, ccrgit)
-# 
-# ccr_turnover <- ccrfull |>
-#   select(3:16) |>
-#   mutate(Date = as.Date(DateTime)) |>
-#   select(-c(1,7:12)) |>
-#   group_by(Date) |>
-#   summarise(across(everything(), list(mean))) |>
-#   filter(Date > ymd("2023-03-13")) |>
-#   mutate(T1_T13 = ThermistorTemp_C_1_1 - ThermistorTemp_C_13_1,
-#          T2_T13 = ThermistorTemp_C_2_1 - ThermistorTemp_C_13_1,
-#          T3_T13 = ThermistorTemp_C_3_1 - ThermistorTemp_C_13_1,
-#          T4_T13 = ThermistorTemp_C_4_1 - ThermistorTemp_C_13_1,
-#          T5_T13 = ThermistorTemp_C_5_1 - ThermistorTemp_C_13_1)
-# 
-# 
-# #CCR mixes: 2023-11-14; restrats 2024-03-03; mixes 2024-11-03
-# #these and FCR and BVR defined as mixing first day top and bottom temp are < 1C; strat as first day that top and bottom are > 1C and remains for 2 weeks
-
-
-```
-
-
-get water level data 
-
-```{r}
-fcredi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/271/9/f23d27b67f71c25cb8e6232af739f986")
-fcrgit <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/FCRE-data/refs/heads/fcre-catwalk-data-qaqc/fcre-waterquality_L1.csv")
-
-bvredi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/725/5/f649de0e8a468922b40dcfa34285055e")
-bvrgit <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/BVRE-data/refs/heads/bvre-platform-data-qaqc/bvre-waterquality_L1.csv")
-
-ccredi <- read_csv("https://pasta.lternet.edu/package/data/eml/edi/1069/3/4afb209b30ebed898334badd3819d854")
-ccrgit <- read_csv("https://raw.githubusercontent.com/FLARE-forecast/CCRE-data/refs/heads/ccre-dam-data-qaqc/ccre-waterquality_L1.csv")
-
-```
-
 water level data and plots 
 
 ```{r}
+##read in 10 minute data
+bvr10min <- read_csv("../Data/Targets/BVR_catwalk_10min.csv")
+ccr10min <- read_csv("../Data/Targets/CCR_catwalk_10min.csv")
+fcr10min <- read_csv("../Data/Targets/FCR_catwalk_10min.csv")
+
+
+
 #### BVR
-bvrdepth <- rbind(bvredi, bvrgit) |> 
+bvrdepth <- bvr10min |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(depth = mean(LvlDepth_m_13, na.rm = T)) |> 
   filter(Date >= ymd("2024-03-01"),
-         Date <= ymd("2025-03-01"))
+         Date <= ymd("2025-04-03")) |> 
+  mutate(site = "BVR")
 
 summary(bvrdepth)
 
+bvrdepth |> 
+  ggplot(aes(x = Date, y = depth)) + geom_point()
+
 depth_bvrplot <- bvrdepth |> 
   ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("BVR")
-plotly::ggplotly(depth_bvrplot)
+#plotly::ggplotly(depth_bvrplot)
 ##BVR water level rises from 9.89 to 10.30 (0.4m) between 25sep24 (day before) and 6oct24 (10 days after helene)
 
 
 #### CCR
-ccrdepth <- rbind(ccredi, ccrgit) |> 
+ccrdepth <- ccr10min |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(depth = mean(LvlDepth_m_13, na.rm = T)) |> 
   filter(Date >= ymd("2024-03-01"),
-         Date <= ymd("2025-03-01"))
+         Date <= ymd("2025-04-03")) |> 
+  mutate(site = "CCR")
 
 summary(ccrdepth)
 
-depth_ccrplot <- ccrdepth |> 
-  ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("CCR")
-plotly::ggplotly(depth_ccrplot)
+ccrdepth |> 
+  ggplot(aes(x = Date, y = depth)) + geom_point()
+
+# depth_ccrplot <- ccrdepth |> 
+#   ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("CCR")
+# plotly::ggplotly(depth_ccrplot)
 ##CCR water level rises from 17.26 to 18.48 (1.2m) between 25sep24 (day before) and 6oct24 (10 days after helene)
 
 
 #### FCR
-fcrdepth <- rbind(fcredi, fcrgit) |> 
+fcrdepth <- fcr10min |> 
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(depth = mean(LvlDepth_m_9, na.rm = T)) |> 
   filter(Date >= ymd("2024-03-01"),
-         Date <= ymd("2025-03-01"))
+         Date <= ymd("2025-04-03")) |> 
+  mutate(site = "FCR")
 
 summary(fcrdepth)
 
-depth_fcrplot <- fcrdepth |> 
-  ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("FCR")
-plotly::ggplotly(depth_fcrplot)
+fcrdepth |> 
+  ggplot(aes(x = Date, y = depth)) + geom_point()
+
+# depth_fcrplot <- fcrdepth |> 
+#   ggplot(aes(x = Date, y = depth)) + geom_point() + geom_vline(xintercept = ymd("2024-09-26"))+ ggtitle("FCR")
+# plotly::ggplotly(depth_fcrplot)
 ##FCR water level rises from 9.17 to 9.18  (0.01 m) between 25sep24 (day before) and 6oct24 (10 days after helene)
 ## But peaked at 9.29m on 28sep24 (0.1m)
+
+
+## combined depth plot
+allres_waterlevel <- rbind(fcrdepth, bvrdepth, ccrdepth) |> 
+  ggplot(aes(x = Date, y = depth, color = site))+
+  geom_point()+
+  facet_wrap(~site, ncol = 1, scales = "free_y")+
+  scale_x_date(date_breaks = "2 month", date_labels = "%b" )+
+  labs(x = "Date", y = "Water level (m)", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
+  
+allres_waterlevel
+
+#ggsave("../Figures/Fig_S1_waterlevel.png", allres_waterlevel, height = 4, width = 6.5, units = "in")
+
+
+plotly::ggplotly(allres_waterlevel)
+#from 11feb to 18feb 
+#BVR 8.5 - 9.1: 0.6m
+#CCR 18.35 - 19.85: 1.5m
+#FCR 9.26 to 9.26, but peaked at 9.36 on 16feb
 
 
 ```
