@@ -545,87 +545,6 @@ plotly::ggplotly(rmse_season_v2)
 
 
 
-## Example forecast plots
-
-```{r}
-
-###set up data for example
-weekbefore <- Scored_forecasts |> 
-    filter(datetime <= ymd("2024-07-15"),
-           datetime >= ymd("2024-07-15") - 7) |> 
-  select(datetime, observation, model_id, site_id)
-
-example_forecast_data <- Scored_forecasts |> 
-  filter(reference_datetime == ymd("2024-07-15"))
-  
-
-### Example for MS 
-example_4cast <- example_forecast_data |> 
-  plyr::rbind.fill(weekbefore) |> 
-  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
-  ggplot()+
-  geom_point(aes(datetime, observation)) +
-  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean, color = model_id))+
-  facet_wrap(~site_id, scales = "free", nrow = 3) +
-  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
-  # ylim(0,40)+
-  # guides(x =  guide_axis(angle = 30)) +
-  guides(fill = guide_legend(nrow = 6))+
-  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ #theme(legend.position = "right", text = element_text(size = 14), legend.text = element_text(size =12))+
-  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
-
-example_4cast
-
-#ggsave("../Figures/Example_4cast.png", example_4cast, width = 5.5, height = 3.5, units = "in")
-
-
-#### Examples for workflow figure
-
-#figure where just one model at one reservoir; NO evaluation
-example_workflow <-  example_forecast_data |> 
-  plyr::rbind.fill(weekbefore) |> 
-  filter(site_id == "FCR", model_id == "TS_AR") |> 
-  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
-  ggplot()+
-  geom_point(aes(datetime, observation)) +
-  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean))+
-  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
-  guides(fill = guide_legend(nrow = 6))+
-  theme_bw() + theme(text = element_text(size = 18))+
-  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
-
-example_workflow
-
-#ggsave("../Figures/Ex_4cast_workflow.png", example_workflow, width = 2.8, height = 3, units = "in")
-
-
-
-#figure where just one model at one reservoir; YES evaluated
-example_workflow_eval <-  example_forecast_data |> 
-  plyr::rbind.fill(weekbefore) |>
-  filter(site_id == "FCR", model_id == "TS_AR") |> 
-  ggplot()+
-  geom_point(aes(datetime, observation)) +
-  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
-  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5), alpha = 0.2)+
-  geom_line(aes(x = datetime, y = mean))+
-  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
-  guides(fill = guide_legend(nrow = 6))+
-  theme_bw() + theme(text = element_text(size = 18))+
-  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
-
-example_workflow_eval
-
-#ggsave("../Figures/Ex_4cast_workflow_eval.png", example_workflow_eval, width = 2.8, height = 3, units = "in")
-
-
-```
-
-
 
 ## Observed fDOM TS
 
@@ -881,6 +800,86 @@ plotly::ggplotly(allres_waterlevel)
 
 ```
 
+
+## Example forecast plots
+
+```{r}
+
+###set up data for example
+weekbefore <- Scored_forecasts |> 
+    filter(datetime <= ymd("2024-07-15"),
+           datetime >= ymd("2024-07-15") - 7) |> 
+  select(datetime, observation, model_id, site_id)
+
+example_forecast_data <- Scored_forecasts |> 
+  filter(reference_datetime == ymd("2024-07-15"))
+  
+
+### Example for MS 
+example_4cast <- example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |> 
+  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5, fill = model_id), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean, color = model_id))+
+  facet_wrap(~site_id, scales = "free", nrow = 3) +
+  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  # ylim(0,40)+
+  # guides(x =  guide_axis(angle = 30)) +
+  guides(fill = guide_legend(nrow = 6))+
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ #theme(legend.position = "right", text = element_text(size = 14), legend.text = element_text(size =12))+
+  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
+
+example_4cast
+
+#ggsave("../Figures/Example_4cast.png", example_4cast, width = 5.5, height = 3.5, units = "in")
+
+
+#### Examples for workflow figure
+
+#figure where just one model at one reservoir; NO evaluation
+example_workflow <-  example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |> 
+  filter(site_id == "FCR", model_id == "TS_AR") |> 
+  mutate(observation = ifelse(datetime > ymd("2024-07-15"), NA, observation)) |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean))+
+  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  guides(fill = guide_legend(nrow = 6))+
+  theme_bw() + theme(text = element_text(size = 18))+
+  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
+
+example_workflow
+
+#ggsave("../Figures/Ex_4cast_workflow.png", example_workflow, width = 2.8, height = 3, units = "in")
+
+
+
+#figure where just one model at one reservoir; YES evaluated
+example_workflow_eval <-  example_forecast_data |> 
+  plyr::rbind.fill(weekbefore) |>
+  filter(site_id == "FCR", model_id == "TS_AR") |> 
+  ggplot()+
+  geom_point(aes(datetime, observation)) +
+  geom_vline(aes(xintercept = as.Date("2024-07-15")))+
+  geom_ribbon(aes(x = datetime, ymin = quantile02.5, ymax = quantile97.5), alpha = 0.2)+
+  geom_line(aes(x = datetime, y = mean))+
+  labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
+  guides(fill = guide_legend(nrow = 6))+
+  theme_bw() + theme(text = element_text(size = 18))+
+  scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
+
+example_workflow_eval
+
+#ggsave("../Figures/Ex_4cast_workflow_eval.png", example_workflow_eval, width = 2.8, height = 3, units = "in")
+
+
+```
 
 
 
