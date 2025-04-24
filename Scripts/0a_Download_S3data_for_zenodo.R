@@ -7,6 +7,9 @@ library(tidyverse)
 #current file path is to R project but could use an external drive for more storage
 lake_directory <- here::here("Data") #("D:/fDOM4cast_zenodo")
 
+## S3 bucket storage has changed from 'renc.osn.xsede.org' to 'amnh1.osn.mghpcc.org' as of 24apr25; 
+# so may have to update links below if recreating the zenodo data package
+
 #### NOAA stage 2 ------------------------------------------------
 
 noaa_df <- (arrow::s3_bucket('bio230121-bucket01/flare/drivers/met/gefs-v12/stage2', 
