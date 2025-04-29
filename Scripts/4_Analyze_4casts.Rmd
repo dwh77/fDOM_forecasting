@@ -103,10 +103,11 @@ d <- Scored_forecasts |>
 #### Make SI figure 
 
 SI_all_metrics_over_horizon <- rbind(c,d) |> 
+  mutate(site_id = ifelse(site_id == "Across Sites", "Across Reservoirs", site_id)) |> 
   filter(!name %in% c("MAE")) |> 
 ggplot(aes(x = Horizon, y = value, color = model_id, linetype = model_type))+
   geom_line(linewidth = 1.2)+
-  facet_grid(name~factor(site_id, levels = c("Across Sites","BVR", "CCR", "FCR")), scales = "free_y")+
+  facet_grid(name~factor(site_id, levels = c("Across Reservoirs","BVR", "CCR", "FCR")), scales = "free_y")+
   labs(x = "Horizon", y = "Metric (QSU)")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12))+
     # scale_x_continuous(breaks = c(1,4,7,10,13, 16))+
@@ -155,7 +156,7 @@ skill_crps_persist_b <- Scored_forecasts |>
   pivot_longer(-c(1:2)) |> 
   group_by(Horizon, name) |> 
   summarise(value = mean(value, na.rm = T)) |> 
-  mutate(site_id = "Across Sites")
+  mutate(site_id = "Across Reservoirs")
 
 #bind
 skill_crps_persist <- rbind(skill_crps_persist_a, skill_crps_persist_b)
@@ -186,7 +187,7 @@ skill_crps_clim_b <- Scored_forecasts |>
   pivot_longer(-c(1:2)) |> 
   group_by(Horizon, name) |> 
   summarise(value = mean(value, na.rm = T)) |> 
-  mutate(site_id = "Across Sites")
+  mutate(site_id = "Across Reservoirs")
 
 skill_crps_clim <- rbind(skill_crps_clim_a, skill_crps_clim_b)
 
@@ -218,7 +219,7 @@ skill_rmse_persist_b <- Scored_forecasts |>
          Skill_RainLag_rmse_P = 1-(TS_Rain/Persistence)) |> 
   select(Horizon, Skill_AR_rmse_P:Skill_RainLag_rmse_P) |> 
   pivot_longer(-c(1)) |> 
-  mutate(site_id = "Across Sites")
+  mutate(site_id = "Across Reservoirs")
 
 skill_rmse_persist <- rbind(skill_rmse_persist_a, skill_rmse_persist_b)
 
@@ -250,7 +251,7 @@ skill_rmse_clim_b <- Scored_forecasts |>
          Skill_RainLag_rmse_C = 1-(TS_Rain/DOY)) |> 
   select(Horizon, Skill_AR_rmse_C:Skill_RainLag_rmse_C) |> 
   pivot_longer(-c(1))|> 
-  mutate(site_id = "Across Sites")
+  mutate(site_id = "Across Reservoirs")
 
 skill_rmse_clim <- rbind(skill_rmse_clim_a, skill_rmse_clim_b)
 
@@ -277,7 +278,7 @@ skill_crps_plot <- skill_df |>
   #filter(!site_id == "Across Sites") |> 
   ggplot(aes(x = Horizon, y = value, color = model_idA))+
   geom_line()+
-  facet_grid(NullA~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
+  facet_grid(NullA~factor(site_id, levels = c("Across Reservoirs", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
   # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
@@ -294,7 +295,7 @@ skill_rmse_plot <- skill_df |>
   #filter(!site_id == "Across Sites") |> 
   ggplot(aes(x = Horizon, y = value, color = model_idA))+
   geom_line()+
-  facet_grid(NullA~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
+  facet_grid(NullA~factor(site_id, levels = c("Across Reservoirs", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
   # scale_x_continuous(breaks = c(1,4,7,10,13,16))+ 
@@ -310,7 +311,7 @@ skill_rmse_plot <- skill_df |>
 all_skill_SI <- skill_rmse_plot / skill_crps_plot
 
 all_skill_SI
-#ggsave("../Figures/figS3_all_skill_SI.png", all_skill_SI, height = 8, width = 6, units = "in")
+ggsave("../Figures/figS3_all_skill_SI.png", all_skill_SI, height = 8, width = 6.5, units = "in")
 
 
 ```
@@ -321,9 +322,10 @@ RMSE combined plot
 
 #RMSE horizon plot
 rmse_for_join <- rbind(a,b) |> 
+    mutate(site_id = ifelse(site_id == "Across Sites", "Across Reservoirs", site_id)) |> 
   ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ 
   geom_line(linewidth = 1.2)+
-  facet_wrap(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "fixed", ncol = 4)+
+  facet_wrap(~factor(site_id, levels = c("Across Reservoirs", "BVR", "CCR", "FCR")), scales = "fixed", ncol = 4)+
 
   labs(x = "Horizon", y = "RMSE (QSU)", color = "Model ID", linetype = "Model Type")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 12),
@@ -338,7 +340,7 @@ skill_for_join <- skill_df |>
   #filter(!site_id == "Across Sites") |> 
   ggplot(aes(x = Horizon, y = value, color = model_idA))+
   geom_line()+
-  facet_grid(~factor(site_id, levels = c("Across Sites", "BVR", "CCR", "FCR")), scales = "free_y")+
+  facet_grid(~factor(site_id, levels = c("Across Reservoirs", "BVR", "CCR", "FCR")), scales = "free_y")+
   geom_hline(yintercept = 0, linewidth =1.2, linetype = 2)+
   geom_line(linewidth = 1.2)+
   labs(x = "Horizon", y = "Forecast Skill", color = "Model ID")+
@@ -473,7 +475,7 @@ e <- Scored_forecasts_seasons |>
 f <- Scored_forecasts_seasons |> 
   group_by(Horizon, model_id, model_type, Season2) |> 
   summarise(RMSE = round(sqrt(mean((mean - observation)^2, na.rm = TRUE)), 2)) |> 
-  mutate(site_id = "Across Sites")
+  mutate(site_id = "Across Reservoirs")
 
 
 
@@ -483,7 +485,7 @@ f <- Scored_forecasts_seasons |>
 rmse_season_v2 <- rbind(e,f) |> 
   ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ # color = model_id
   geom_line(linewidth = 1.2)+
-  facet_grid(factor(site_id, levels = c("BVR", "CCR", "FCR", "Across Sites"))
+  facet_grid(factor(site_id, levels = c("BVR", "CCR", "FCR", "Across Reservoirs"))
              ~
                factor(Season2, levels = c("Winter", "Spring", "Summer", "Fall" )))+
   # scale_x_continuous(breaks = c(1,4,7,10,13,16))+
@@ -495,7 +497,7 @@ rmse_season_v2 <- rbind(e,f) |>
 
 rmse_season_v2
 
-#ggsave("../Figures/Fig_S4_rmse_season_SI.png", rmse_season_v2, height = 5.5, width = 6.5, units = "in")
+#ggsave("../Figures/Fig_S4_rmse_season_SI.png", rmse_season_v2, height = 7, width = 6.5, units = "in")
 
 
 
@@ -508,11 +510,11 @@ rmse_seasons_avgModels <- rbind(e,f) |>
   geom_line(linewidth = 1.2)+
   facet_wrap(~factor(Season2, levels = c("Winter", "Spring", "Summer", "Fall" )), ncol = 4)+
   # scale_x_continuous(breaks = c(1,4,7,10,13,16))+
-  labs(x = "Horizon", y = "RMSE (QSU)")+
+  labs(x = "Horizon", y = "RMSE (QSU)", color = "Reservoir")+
   guides(linetype = guide_legend(nrow = 2))+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
-  scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue", "Across Sites" = "black"))
+  scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue", "Across Reservoirs" = "black"))
 
 rmse_seasons_avgModels
 
