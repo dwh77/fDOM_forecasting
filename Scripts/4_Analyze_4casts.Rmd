@@ -311,7 +311,7 @@ skill_rmse_plot <- skill_df |>
 all_skill_SI <- skill_rmse_plot / skill_crps_plot
 
 all_skill_SI
-ggsave("../Figures/figS3_all_skill_SI.png", all_skill_SI, height = 8, width = 6.5, units = "in")
+#ggsave("../Figures/figS3_all_skill_SI.png", all_skill_SI, height = 8, width = 6.5, units = "in")
 
 
 ```
@@ -352,7 +352,45 @@ rmse_skill_combo <- ggpubr::ggarrange(rmse_for_join, skill_for_join, ncol = 1, l
 
 rmse_skill_combo
 
-#ggsave("../Figures/fig5_RMSE_and_Skill_combo_MS.png", rmse_skill_combo, height = 6, width = 6.1, units = "in")
+#ggsave("../Figures/fig5_RMSE_and_Skill_combo_MS_longer.png", rmse_skill_combo, height = 8, width = 6.1, units = "in")
+
+
+
+```
+
+EFI plots
+```{r}
+efirmse <- rbind(a,b) |> 
+    mutate(site_id = ifelse(site_id == "Across Sites", "Across Reservoirs", site_id)) |> 
+  ggplot(aes(x = Horizon, y = RMSE, color = model_id, linetype = model_type))+ 
+  geom_line(linewidth = 2)+
+  facet_wrap(~factor(site_id, levels = c("Across Reservoirs", "BVR", "CCR", "FCR")), scales = "fixed", ncol = 1)+
+
+  labs(x = "Horizon", y = "RMSE (QSU)", color = "Model ID", linetype = "Model Type")+
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 48),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  guides(linetype = guide_legend(nrow = 2))+
+  scale_color_manual(values = model_colors)+  scale_linetype_manual(values = model_shape)
+
+
+ggsave("../Figures/EFI_rmse_long.png", efirmse, height = 18, width = 14, units = "in")
+
+
+efiskill <- skill_df |> 
+  filter(metric == "rmse",
+         Null == "Skill_Peristence") |> 
+  #filter(!site_id == "Across Sites") |> 
+  ggplot(aes(x = Horizon, y = value, color = model_idA))+
+  geom_line()+
+  facet_grid(~factor(site_id, levels = c("Across Reservoirs", "BVR", "CCR", "FCR")), scales = "free_y")+
+  geom_hline(yintercept = 0, linewidth =2, linetype = 2)+
+  geom_line(linewidth = 2)+
+  labs(x = "Horizon", y = "Forecast Skill", color = "Model ID")+
+  theme_bw() + theme(legend.position = "none", text = element_text(size = 36),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_manual(values = model_colors)
+
+ggsave("../Figures/EFI_skill.png", efiskill, height = 8, width = 17, units = "in")
 
 
 
@@ -384,6 +422,19 @@ Make tables for MS: Table 2 (RMSE) and S1 (CRPS); and SD stats for Supp Text S1
 ```{r}
 
 ########################################## RMSE  #
+
+#table to get metrics by horizon 
+rbind(c,d) |> 
+  filter(name %in% c("RMSE", "CRPS"),
+         Horizon %in% c(1,7,14,28)) |> 
+  pivot_wider(names_from = name, values_from = value)
+
+rbind(c,d) |> 
+  filter(name %in% c("RMSE"),
+         Horizon %in% c(1,7,14,28)) |> 
+  pivot_wider(names_from = Horizon, values_from = value)
+
+###Tables from first submission 
 
 #across sites and all models 
 rbind(c,d) |> 
@@ -545,6 +596,94 @@ plotly::ggplotly(rmse_season_v2)
 
 ```
 
+## 95% CI interval stats
+
+```{r}
+head(Scored_forecasts)
+
+CI95_stats <- Scored_forecasts |> 
+  mutate(CI95 = ifelse(observation <= quantile97.5 & observation >= quantile02.5, 1, 0 )) |> 
+  group_by(model_id, model_type, site_id, Horizon) |> 
+  summarise(CI95_sum = sum(CI95, na.rm = T),
+            CI95_n = sum(!is.na(CI95))) |> 
+  mutate(CI95_percent = CI95_sum/CI95_n)
+
+
+CI95fig <- CI95_stats |> 
+  ggplot(aes(x = Horizon, y = (CI95_percent)*100, color = model_id, linetype = model_type))+
+  geom_line(size = 1.5)+
+  facet_wrap(~site_id)+
+  geom_hline(yintercept = 95, linetype = 1, size = 0.75)+
+  labs(x = "Forecast Horizon (days)", y = "Percent of observations \n within the 95% CI")+
+  scale_color_manual(values = model_colors)+
+scale_linetype_manual(values = model_shape)+
+  guides(linetype = guide_legend(nrow = 2))+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+CI95fig
+
+ggsave("../Figures/SI_95percentCI.png", CI95fig, height = 4, width = 7.5, units = "in")
+
+  
+
+
+```
+
+## full TS of forecasts
+
+```{r}
+## 1 day
+fullts_1day <- Scored_forecasts |> 
+  filter(Horizon %in% c(1)) |> 
+  # mutate(Horizon_label = ifelse(Horizon == 1, "1 day ahead", NA)) |> 
+  ggplot()+
+    geom_point(aes(x = as.Date(datetime), y = observation), color = "red", size = 0.5)+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  facet_grid(site_id~model_id, scales = "free_y")+
+  #ylim(5,30)+
+  scale_x_date(date_breaks = "4 month", date_labels = "%b" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "1 day ahead forecasts")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+## 16 day
+fullts_16day <- Scored_forecasts |> 
+  filter(Horizon %in% c(16)) |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = observation), color = "red", size = 0.5)+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  facet_grid(site_id~model_id, scales = "free_y")+
+  #ylim(5,30)+
+  scale_x_date(date_breaks = "4 month", date_labels = "%b" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "16 day ahead forecasts")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+## 28 day
+fullts_34day <- Scored_forecasts |> 
+  filter(Horizon %in% c(34)) |> 
+  ggplot()+
+  geom_point(aes(x = as.Date(datetime), y = observation), color = "red", size = 0.5)+
+  geom_ribbon(aes(x = as.Date(datetime), ymin = quantile02.5, ymax = quantile97.5), fill = "gray", alpha = 0.5)+
+  geom_line(aes(x = as.Date(datetime), y = mean))+
+  facet_grid(site_id~model_id, scales = "free_y")+
+  #ylim(5,30)+
+  scale_x_date(date_breaks = "4 month", date_labels = "%b" )+
+  labs(x = element_blank(), y = "fDOM (QSU)", title = "34 day ahead forecasts")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+SIfig_full_4castTS <- fullts_1day / fullts_16day / fullts_34day
+
+#ggsave("../Figures/SIfig_full_4castTS_v2.png", SIfig_full_4castTS, height = 8, width = 6.5, units = "in")
+
+
+```
 
 
 
@@ -836,7 +975,7 @@ example_4cast <- example_forecast_data |>
 
 example_4cast
 
-#ggsave("../Figures/Example_4cast.png", example_4cast, width = 5.5, height = 3.5, units = "in")
+#ggsave("../Figures/Example_4cast_longer.png", example_4cast, width = 5.5, height = 4.5, units = "in")
 
 
 #### Examples for workflow figure
@@ -879,6 +1018,114 @@ example_workflow_eval <-  example_forecast_data |>
 example_workflow_eval
 
 #ggsave("../Figures/Ex_4cast_workflow_eval.png", example_workflow_eval, width = 2.8, height = 3, units = "in")
+
+
+```
+
+
+
+## Other EXO variable TS
+
+```{r}
+#set p for temp corrections 
+p <- -0.01
+
+#### set up data
+## FCR 
+fcr10min <- read_csv("./Data/Targets/FCR_catwalk_10min.csv")
+
+fcr_daily <- fcr10min |> 
+  mutate(fdom_TC = EXOfDOM_QSU_1/(1 + (p*(EXOTemp_C_1 - 20)) )   ) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(fdom_TC, na.rm = T),
+            Temp_C_mean = mean(EXOTemp_C_1, na.rm = T),
+            Chla_ugL_mean = mean(EXOChla_ugL_1, na.rm = T),
+            Turb_FNU_mean = mean(EXOTurbidity_FNU_1, na.rm = T),
+            Depth_m_mean = mean(LvlDepth_m_9, na.rm = T)
+            ) |> 
+  mutate(Reservoir = "FCR")
+
+
+## BVR
+bvr10min <- read_csv("./Data/Targets/BVR_catwalk_10min.csv")
+
+bvr_daily <- bvr10min |> 
+  mutate(fdom_TC = EXOfDOM_QSU_1.5/(1 + (p*(EXOTemp_C_1.5 - 20)) )   ) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(fdom_TC, na.rm = T),
+            Temp_C_mean = mean(EXOTemp_C_1.5, na.rm = T),
+            Chla_ugL_mean = mean(EXOChla_ugL_1.5, na.rm = T),
+            Turb_FNU_mean = mean(EXOTurbidity_FNU_1.5, na.rm = T),
+            Depth_m_mean = mean(LvlDepth_m_13, na.rm = T)
+  ) |> 
+  mutate(Reservoir = "BVR")
+
+
+## CCR
+ccr10min <- read_csv("./Data/Targets/CCR_catwalk_10min.csv")
+
+ccr_daily <- ccr10min |> 
+  mutate(fdom_TC = EXOfDOM_QSU_1/(1 + (p*(EXOTemp_C_1 - 20)) )   ) |> 
+  mutate(Date = as.Date(DateTime)) |> 
+  group_by(Date) |> 
+  summarise(fDOM_QSU_mean = mean(fdom_TC, na.rm = T),
+            Temp_C_mean = mean(EXOTemp_C_1, na.rm = T),
+            Chla_ugL_mean = mean(EXOChla_ugL_1, na.rm = T),
+            #Turb_FNU_mean = mean(EXOTurbidity_FNU_1, na.rm = T),
+            Depth_m_mean = mean(LvlDepth_m_13, na.rm = T)
+  ) |> 
+  mutate(Reservoir = "CCR")
+
+
+### bind data
+daily_data <- plyr::rbind.fill(fcr_daily, ccr_daily, bvr_daily)
+
+
+#### Plots 
+
+#sensors
+exo_othervariables <- daily_data |> 
+  filter(Date >= ymd("2023-03-13"),
+         Date <= ymd("2025-04-03")) |> 
+  rename(Temp_C = Temp_C_mean,
+         Chla_ugL = Chla_ugL_mean,
+         Turb_FNU = Turb_FNU_mean,
+         fDOM_QSU = fDOM_QSU_mean) |> 
+  select(-Depth_m_mean) |> 
+  pivot_longer(-c(Reservoir, Date)) |> 
+  ggplot(aes(x = Date, y = value))+
+  geom_point()+
+  geom_vline(xintercept = ymd("2024-03-01"), linetype = 2, linewidth = 1.2)+
+  facet_grid(factor(name, levels = c("Temp_C", "fDOM_QSU", "Turb_FNU", "Chla_ugL"))~Reservoir,
+             scales = "free_y")+
+  scale_x_date(date_labels = "%b", breaks = "6 months")+
+  labs(x = "Date", y = "Variable", color = "Reservoir")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 14),
+                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+
+#ggsave("../Figures/SI_exo_timeseries.png", exo_othervariables, width = 6, height = 4.5, units = "in")
+
+#R2R Figure
+daily_data |>
+  filter(Date >= ymd("2023-03-13"),
+         Date <= ymd("2025-04-03")) |> 
+  filter(Reservoir != "CCR") |> 
+  ggplot(aes(x = Turb_FNU_mean, y = fDOM_QSU_mean))+
+  geom_point()+
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  stat_poly_eq(
+    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+    formula = y ~ x,
+    parse = TRUE,
+    size = 3
+  )+
+  facet_wrap(~Reservoir, scales = "free")
+  
+
+
 
 
 ```
