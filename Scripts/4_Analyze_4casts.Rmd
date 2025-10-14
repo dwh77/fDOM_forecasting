@@ -697,7 +697,7 @@ targets <- read_csv("../Data/GeneratedData/Targets_fDOM_allReservoirs.csv")
 
 fdom_TS <- targets |> 
   filter(datetime >= ymd("2023-03-13"),
-         datetime <+ ymd("2025-04-03")
+         datetime <= ymd("2025-04-03")
          ) |> 
   mutate(site_id_A = ifelse(site_id == "fcre", "FCR", NA),
          site_id_A = ifelse(site_id == "bvre", "BVR", site_id_A),
@@ -860,8 +860,9 @@ bvrdepth <- bvr10min |>
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(depth = mean(LvlDepth_m_13, na.rm = T)) |> 
-  filter(Date >= ymd("2024-03-01"),
-         Date <= ymd("2025-04-03")) |> 
+  filter(Date >= ymd("2023-03-13"),
+         Date <= ymd("2025-04-03")
+         ) |> 
   mutate(site = "BVR")
 
 summary(bvrdepth)
@@ -880,7 +881,7 @@ ccrdepth <- ccr10min |>
   mutate(Date = as.Date(DateTime)) |> 
   group_by(Date) |> 
   summarise(depth = mean(LvlDepth_m_13, na.rm = T)) |> 
-  filter(Date >= ymd("2024-03-01"),
+  filter(Date >= ymd("2023-03-13"),
          Date <= ymd("2025-04-03")) |> 
   mutate(site = "CCR")
 
@@ -923,13 +924,18 @@ allres_waterlevel <- rbind(fcrdepth, bvrdepth, ccrdepth) |>
   facet_wrap(~site, ncol = 1, scales = "free_y")+
   scale_x_date(date_breaks = "2 month", date_labels = "%b" )+
   labs(x = "Date", y = "Water level (m)", color = "Reservoir")+
+    geom_vline(xintercept = ymd("2024-03-01"), linetype = 2, linewidth = 1.2)+
+    #   annotate("text", x = as.Date("2023-08-15"), y = 8, label = "Calibration", 
+    #          color = "black", size = 4, fontface = "bold")+
+    # annotate("text", x = as.Date("2024-05-15"), y = 8, label = "Forecasting", 
+    #          color = "black", size = 4, fontface = "bold")+
   theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
                     panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
   
 allres_waterlevel
 
-#ggsave("../Figures/Fig_S1_waterlevel.png", allres_waterlevel, height = 4, width = 6.5, units = "in")
+ggsave("../Figures/Fig_S1_waterlevel2.png", allres_waterlevel, height = 5, width = 6.5, units = "in")
 
 
 plotly::ggplotly(allres_waterlevel)
@@ -937,6 +943,21 @@ plotly::ggplotly(allres_waterlevel)
 #BVR 8.5 - 9.1: 0.6m
 #CCR 18.35 - 19.85: 1.5m
 #FCR 9.26 to 9.26, but peaked at 9.36 on 16feb
+
+bvrdepth |> 
+    ggplot(aes(x = Date, y = depth, color = site))+
+ geom_point()+
+  facet_wrap(~site, ncol = 1, scales = "free_y")+
+  scale_x_date(date_breaks = "2 month", date_labels = "%b" )+
+  labs(x = "Date", y = "Water level (m)", color = "Reservoir")+
+    geom_vline(xintercept = ymd("2024-03-01"), linetype = 2, linewidth = 1.2)+
+      annotate("text", x = as.Date("2023-08-15"), y = 9, label = "Calibration", 
+             color = "black", size = 4, fontface = "bold")+
+    annotate("text", x = as.Date("2024-05-15"), y = 9, label = "Forecasting", 
+             color = "black", size = 4, fontface = "bold")+
+  theme_bw() + theme(legend.position = "top", text = element_text(size = 18),
+                    panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
+  scale_color_manual(values = c("FCR" = "#009E73", "BVR" = "orange", "CCR" = "skyblue"))
 
 
 ```
