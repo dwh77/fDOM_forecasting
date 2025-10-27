@@ -988,10 +988,8 @@ example_4cast <- example_forecast_data |>
   geom_line(aes(x = datetime, y = mean, color = model_id))+
   facet_wrap(~site_id, scales = "free", nrow = 3) +
   labs(x = 'Date', y = 'fDOM (QSU)', fill = "model", color = "model") +
-  # ylim(0,40)+
-  # guides(x =  guide_axis(angle = 30)) +
   guides(fill = guide_legend(nrow = 6))+
-  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+ #theme(legend.position = "right", text = element_text(size = 14), legend.text = element_text(size =12))+
+  theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())+
   scale_fill_manual(values = model_colors)+scale_color_manual(values = model_colors)
 
 example_4cast
